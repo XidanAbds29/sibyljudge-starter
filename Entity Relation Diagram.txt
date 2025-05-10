@@ -1,0 +1,196 @@
+erDiagram
+    %% USERS & AUTH
+    USER {
+      UUID    id PK
+      TEXT    username
+      TEXT    email
+      TEXT    password_hash
+      TEXT    role
+      TIMESTAMP created_at
+    }
+
+    %% EXTERNAL ONLINE JUDGES
+    ONLINE_JUDGE {
+      SERIAL  id PK
+      TEXT    name
+      TEXT    api_base_url
+    }
+
+    %% PROBLEMS & TAGS
+    PROBLEM {
+      UUID       id PK
+      TEXT       external_id
+      INT        source_oj_id FK
+      TEXT       title
+      TEXT       url
+      SMALLINT   difficulty
+      TIMESTAMP  fetched_at
+    }
+    TAG {
+      SERIAL  id PK
+      TEXT    name
+    }
+    PROBLEM_TAG {
+      UUID  problem_id FK
+      INT   tag_id FK
+    }
+
+    %% SUBMISSIONS
+    SUBMISSION {
+      UUID      id PK
+      UUID      user_id FK
+      UUID      problem_id FK
+      TEXT      language
+      TEXT      status
+      FLOAT     exec_time
+      TIMESTAMP submitted_at
+      TEXT      verdict_detail
+    }
+
+    %% CONTESTS
+    CONTEST {
+      UUID       id PK
+      UUID       created_by FK
+      TEXT       name
+      TIMESTAMP  start_time
+      TIMESTAMP  end_time
+      BOOLEAN    is_virtual
+    }
+    CONTEST_PROBLEM {
+      UUID   contest_id FK
+      UUID   problem_id FK
+      TEXT   alias
+    }
+    CONTEST_SUBMISSION {
+      UUID  id PK
+      UUID  contest_id FK
+      UUID  submission_id FK
+    }
+    USER_RATING {
+      UUID      user_id FK
+      UUID      contest_id FK
+      INT       rating_before
+      INT       rating_after
+    }
+
+    %% GROUPS & DISCUSSIONS
+    "GROUP" {
+      UUID      id PK
+      TEXT      name
+      TEXT      description
+      UUID      created_by FK
+      TIMESTAMP created_at
+    }
+    GROUP_MEMBER {
+      UUID  group_id FK
+      UUID  user_id FK
+      TEXT  role
+    }
+    DISCUSSION_THREAD {
+      UUID      id PK
+      UUID      created_by FK
+      TEXT      title
+      TEXT      thread_type
+      UUID      reference_id
+      TIMESTAMP created_at
+    }
+    DISCUSSION_POST {
+      UUID      id PK
+      UUID      thread_id FK
+      UUID      user_id FK
+      TEXT      content
+      TIMESTAMP posted_at
+    }
+
+    %% PROBLEM EDITORIALS
+    PROBLEM_EDITORIAL {
+      UUID      id PK
+      UUID      problem_id FK
+      UUID      created_by FK
+      TEXT      content
+      TIMESTAMP created_at
+      TIMESTAMP updated_at
+    }
+
+    %% GAMIFICATION & SOCIAL
+    BADGE {
+      UUID    id PK
+      TEXT    name
+      TEXT    icon_url
+      TEXT    description
+    }
+    USER_BADGE {
+      UUID  user_id FK
+      UUID  badge_id FK
+      TIMESTAMP awarded_at
+    }
+    NOTIFICATION {
+      UUID      id PK
+      UUID      user_id FK
+      TEXT      type
+      JSONB     payload
+      BOOLEAN   is_read
+      TIMESTAMP created_at
+    }
+    FOLLOW {
+      UUID follower_id FK
+      UUID followee_id FK
+    }
+
+    %% RECOMMENDATIONS & TRACKS
+    RECOMMENDATION {
+      UUID      user_id FK
+      UUID      problem_id FK
+      FLOAT     score
+      TIMESTAMP generated_at
+    }
+    TRACK {
+      UUID    id PK
+      TEXT    name
+      TEXT    description
+    }
+    TRACK_PROBLEM {
+      UUID  track_id FK
+      UUID  problem_id FK
+      INT   ordinal
+    }
+    USER_TRACK_PROGRESS {
+      UUID    user_id FK
+      UUID    track_id FK
+      TEXT    status
+      TIMESTAMP updated_at
+    }
+
+    %% RELATIONSHIPS (Crow's Foot)
+    USER           ||--o{ SUBMISSION           : "submits"
+    PROBLEM        ||--o{ SUBMISSION           : "receives"
+    USER           ||--o{ CONTEST              : "creates"
+    USER           ||--o{ CONTEST_SUBMISSION   : "makes"
+    SUBMISSION     ||--o{ CONTEST_SUBMISSION   : "appears in"
+    CONTEST        ||--o{ CONTEST_PROBLEM      : "includes"
+    PROBLEM        ||--o{ CONTEST_PROBLEM      : "appears in"
+    USER           ||--o{ USER_RATING          : "has rating"
+    CONTEST        ||--o{ USER_RATING          : "yields rating"
+    ONLINE_JUDGE   ||--o{ PROBLEM              : "provides"
+    PROBLEM        ||--o{ PROBLEM_TAG          : "tagged in"
+    TAG            ||--o{ PROBLEM_TAG          : "tags"
+    USER           ||--o{ GROUP_MEMBER         : "joins"
+    "GROUP"        ||--o{ GROUP_MEMBER         : "has members"
+    USER           ||--o{ DISCUSSION_THREAD    : "starts"
+    "GROUP"        ||--o{ DISCUSSION_THREAD    : "owns threads"
+    PROBLEM        ||--o{ DISCUSSION_THREAD    : "has threads"
+    DISCUSSION_THREAD ||--o{ DISCUSSION_POST   : "contains"
+    USER           ||--o{ DISCUSSION_POST      : "writes"
+    PROBLEM        ||--o{ PROBLEM_EDITORIAL    : "has editorial"
+    USER           ||--o{ PROBLEM_EDITORIAL    : "authors"
+    USER           ||--o{ USER_BADGE           : "earns"
+    BADGE          ||--o{ USER_BADGE           : "awards"
+    USER           ||--o{ NOTIFICATION         : "receives"
+    USER           ||--o{ FOLLOW               : "follows"
+    USER           ||--o{ FOLLOW               : "followed by"
+    USER           ||--o{ RECOMMENDATION       : "gets"
+    PROBLEM        ||--o{ RECOMMENDATION       : "recommended to"
+    USER           ||--o{ USER_TRACK_PROGRESS  : "progresses"
+    TRACK          ||--o{ TRACK_PROBLEM        : "contains"
+    PROBLEM        ||--o{ TRACK_PROBLEM        : "in tracks"
+    TRACK          ||--o{ USER_TRACK_PROGRESS  : "tracked by"
