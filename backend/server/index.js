@@ -1,5 +1,3 @@
-// backend/server/index.js
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -29,16 +27,36 @@ app.get('/', async (req, res) => {
   }
 });
 
-// ✅ Route to get problems
+// ✅ Get latest problems
 app.get('/api/problems', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT * FROM Problem WHERE source_oj_id = 1 ORDER BY fetched_at DESC LIMIT 10`
+      `SELECT * FROM problem WHERE source_oj_id = 1 ORDER BY fetched_at DESC LIMIT 10`
     );
     res.json(result.rows);
   } catch (err) {
     console.error('❌ Error fetching problems:', err);
     res.status(500).json({ error: 'Failed to fetch problems' });
+  }
+});
+
+// ✅ Get a single problem by external_id
+app.get('/api/problems/:external_id', async (req, res) => {
+  const { external_id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT * FROM problem WHERE external_id = $1 AND source_oj_id = 1`,
+      [external_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Problem not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('❌ Error fetching single problem:', err);
+    res.status(500).json({ error: 'Failed to fetch problem' });
   }
 });
 
