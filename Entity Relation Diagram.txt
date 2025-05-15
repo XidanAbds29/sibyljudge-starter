@@ -1,196 +1,286 @@
-erDiagram
-    %% USERS & AUTH
-    USER {
-      UUID    id PK
-      TEXT    username
-      TEXT    email
-      TEXT    password_hash
-      TEXT    role
-      TIMESTAMP created_at
-    }
+// DBML schema for dbdiagram.io
 
-    %% EXTERNAL ONLINE JUDGES
-    ONLINE_JUDGE {
-      SERIAL  id PK
-      TEXT    name
-      TEXT    api_base_url
-    }
+Table User {
+  user_id int [pk, increment]
+  username varchar(50) [not null]
+  email varchar(100) [not null]
+  password_hash text [not null]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  institution varchar(100)
+  bio varchar(100)
+   is_admin      boolean   [not null, default: false] 
+}
 
-    %% PROBLEMS & TAGS
-    PROBLEM {
-      UUID       id PK
-      TEXT       external_id
-      INT        source_oj_id FK
-      TEXT       title
-      TEXT       url
-      SMALLINT   difficulty
-      TIMESTAMP  fetched_at
-    }
-    TAG {
-      SERIAL  id PK
-      TEXT    name
-    }
-    PROBLEM_TAG {
-      UUID  problem_id FK
-      INT   tag_id FK
-    }
+Table Online_judge {
+  judge_id int [pk, increment]
+  name varchar(100) [not null]
+  api_based_url text
+}
 
-    %% SUBMISSIONS
-    SUBMISSION {
-      UUID      id PK
-      UUID      user_id FK
-      UUID      problem_id FK
-      TEXT      language
-      TEXT      status
-      FLOAT     exec_time
-      TIMESTAMP submitted_at
-      TEXT      verdict_detail
-    }
+Table Problem {
+  problem_id int [pk, increment]
+  source_oj_id int [not null]
+  external_id varchar(100) [not null]
+  title varchar(200) [not null]
+  url text
+  difficulty varchar(20)
+  time_limit int [not null]
+  mem_limit int [not null]
+  fetched_at datetime [default: `CURRENT_TIMESTAMP`]
+}
 
-    %% CONTESTS
-    CONTEST {
-      UUID       id PK
-      UUID       created_by FK
-      TEXT       name
-      TIMESTAMP  start_time
-      TIMESTAMP  end_time
-      BOOLEAN    is_virtual
-    }
-    CONTEST_PROBLEM {
-      UUID   contest_id FK
-      UUID   problem_id FK
-      TEXT   alias
-    }
-    CONTEST_SUBMISSION {
-      UUID  id PK
-      UUID  contest_id FK
-      UUID  submission_id FK
-    }
-    USER_RATING {
-      UUID      user_id FK
-      UUID      contest_id FK
-      INT       rating_before
-      INT       rating_after
-    }
+Table Tag {
+  tag_id int [pk, increment]
+  name varchar(100) [not null, unique]
+}
 
-    %% GROUPS & DISCUSSIONS
-    "GROUP" {
-      UUID      id PK
-      TEXT      name
-      TEXT      description
-      UUID      created_by FK
-      TIMESTAMP created_at
-    }
-    GROUP_MEMBER {
-      UUID  group_id FK
-      UUID  user_id FK
-      TEXT  role
-    }
-    DISCUSSION_THREAD {
-      UUID      id PK
-      UUID      created_by FK
-      TEXT      title
-      TEXT      thread_type
-      UUID      reference_id
-      TIMESTAMP created_at
-    }
-    DISCUSSION_POST {
-      UUID      id PK
-      UUID      thread_id FK
-      UUID      user_id FK
-      TEXT      content
-      TIMESTAMP posted_at
-    }
+Table Problem_tag {
+  problem_id int [pk]
+  tag_id int [pk]
+}
 
-    %% PROBLEM EDITORIALS
-    PROBLEM_EDITORIAL {
-      UUID      id PK
-      UUID      problem_id FK
-      UUID      created_by FK
-      TEXT      content
-      TIMESTAMP created_at
-      TIMESTAMP updated_at
-    }
+Table Submission {
+  submission_id int [pk, increment]
+  user_id int [not null]
+  problem_id int [not null]
+  language varchar(50)
+  status varchar(50)
+  exec_time float
+  submitted_at datetime [default: `CURRENT_TIMESTAMP`]
+  verdict_detail text
+}
 
-    %% GAMIFICATION & SOCIAL
-    BADGE {
-      UUID    id PK
-      TEXT    name
-      TEXT    icon_url
-      TEXT    description
-    }
-    USER_BADGE {
-      UUID  user_id FK
-      UUID  badge_id FK
-      TIMESTAMP awarded_at
-    }
-    NOTIFICATION {
-      UUID      id PK
-      UUID      user_id FK
-      TEXT      type
-      JSONB     payload
-      BOOLEAN   is_read
-      TIMESTAMP created_at
-    }
-    FOLLOW {
-      UUID follower_id FK
-      UUID followee_id FK
-    }
+Table Contest {
+  contest_id int [pk, increment]
+  
+  name varchar(200) [not null]
+  password_hash text
+  start_time datetime
+  end_time datetime
 
-    %% RECOMMENDATIONS & TRACKS
-    RECOMMENDATION {
-      UUID      user_id FK
-      UUID      problem_id FK
-      FLOAT     score
-      TIMESTAMP generated_at
-    }
-    TRACK {
-      UUID    id PK
-      TEXT    name
-      TEXT    description
-    }
-    TRACK_PROBLEM {
-      UUID  track_id FK
-      UUID  problem_id FK
-      INT   ordinal
-    }
-    USER_TRACK_PROGRESS {
-      UUID    user_id FK
-      UUID    track_id FK
-      TEXT    status
-      TIMESTAMP updated_at
-    }
+  is_virtual boolean [default: false]
+  is_secured boolean [default :false]
+  difficulty varchar(50)
+  description varchar(1000)
+}
 
-    %% RELATIONSHIPS (Crow's Foot)
-    USER           ||--o{ SUBMISSION           : "submits"
-    PROBLEM        ||--o{ SUBMISSION           : "receives"
-    USER           ||--o{ CONTEST              : "creates"
-    USER           ||--o{ CONTEST_SUBMISSION   : "makes"
-    SUBMISSION     ||--o{ CONTEST_SUBMISSION   : "appears in"
-    CONTEST        ||--o{ CONTEST_PROBLEM      : "includes"
-    PROBLEM        ||--o{ CONTEST_PROBLEM      : "appears in"
-    USER           ||--o{ USER_RATING          : "has rating"
-    CONTEST        ||--o{ USER_RATING          : "yields rating"
-    ONLINE_JUDGE   ||--o{ PROBLEM              : "provides"
-    PROBLEM        ||--o{ PROBLEM_TAG          : "tagged in"
-    TAG            ||--o{ PROBLEM_TAG          : "tags"
-    USER           ||--o{ GROUP_MEMBER         : "joins"
-    "GROUP"        ||--o{ GROUP_MEMBER         : "has members"
-    USER           ||--o{ DISCUSSION_THREAD    : "starts"
-    "GROUP"        ||--o{ DISCUSSION_THREAD    : "owns threads"
-    PROBLEM        ||--o{ DISCUSSION_THREAD    : "has threads"
-    DISCUSSION_THREAD ||--o{ DISCUSSION_POST   : "contains"
-    USER           ||--o{ DISCUSSION_POST      : "writes"
-    PROBLEM        ||--o{ PROBLEM_EDITORIAL    : "has editorial"
-    USER           ||--o{ PROBLEM_EDITORIAL    : "authors"
-    USER           ||--o{ USER_BADGE           : "earns"
-    BADGE          ||--o{ USER_BADGE           : "awards"
-    USER           ||--o{ NOTIFICATION         : "receives"
-    USER           ||--o{ FOLLOW               : "follows"
-    USER           ||--o{ FOLLOW               : "followed by"
-    USER           ||--o{ RECOMMENDATION       : "gets"
-    PROBLEM        ||--o{ RECOMMENDATION       : "recommended to"
-    USER           ||--o{ USER_TRACK_PROGRESS  : "progresses"
-    TRACK          ||--o{ TRACK_PROBLEM        : "contains"
-    PROBLEM        ||--o{ TRACK_PROBLEM        : "in tracks"
-    TRACK          ||--o{ USER_TRACK_PROGRESS  : "tracked by"
+Table Contest_problem {
+  contest_id int [pk]
+  problem_id int [pk]
+  alias varchar(50)
+}
+
+Table Contest_submission {
+  conprob_id int [pk, increment]
+  contest_id int [not null]
+  submission_id int [not null]
+}
+
+Table User_rating {
+  user_id int [pk]
+  contest_id int [pk]
+  rating_performance int
+  
+}
+
+Table Group {
+  group_id int [pk, increment]
+  
+  name varchar(100) [not null]
+  description text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  is_private     boolean  [not null, default: false]  
+  password_hash  text                             
+}
+
+Table Group_member {
+  group_member_id int [pk, increment]
+  group_id int [not null]
+  user_id int [not null]
+  joined_at datetime [default: `CURRENT_TIMESTAMP`]
+  role             varchar  [not null, default: 'member'] 
+}
+
+Table Discussion_thread {
+  dissthread_id int [pk, increment]
+  created_by int [not null]
+  title varchar(200) [not null]
+  thread_type varchar(50)
+  reference_id int
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Discussion_post {
+  disspost_id int [pk, increment]
+  dissthread_id int [not null]
+  user_id int [not null]
+  content text
+  posted_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Problem_Editorial {
+  probed_id int [pk, increment]
+  problem_id int [not null]
+  created_by int [not null]
+  content text
+  status       varchar   [not null, default: 'draft']
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  updated_at datetime
+}
+Table Editorial_Approval {                                   
+  approval_id  int       [pk, increment]                     
+  probed_id    int       [not null, ref: > Problem_Editorial.probed_id]   
+  approved_by  int       [not null, ref: > User.user_id]     
+  approved_at  datetime  [default: `CURRENT_TIMESTAMP`]      
+}
+
+
+Table Badge {
+  badge_id int [pk, increment]
+  name varchar(100) [not null]
+  icon_url text
+  description text
+}
+
+Table User_badge {
+  badge_id int [pk]
+  user_id int [pk]
+  awarded_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Follow {
+  follower_id int [pk]
+  followee_id int [pk]
+  awarded_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Recommendation {
+  user_id int [pk]
+  problem_id int [pk]
+  score float
+  generated_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Track {
+  track_id int [pk, increment]
+  name varchar(100) [not null]
+  description text
+  generated_at datetime [default: `CURRENT_TIMESTAMP`]
+   created_by    int       [not null, ref: > User.user_id] 
+
+}
+
+Table Track_problem {
+  track_id int [pk]
+  problem_id int [pk]
+  ordinal int
+
+  uploaded_by   int       [not null, ref: > User.user_id]   
+  uploaded_at   datetime  [default: `CURRENT_TIMESTAMP`]    
+}
+
+Table User_track_progress {
+  user_id int [pk]
+  track_id int [pk]
+  status varchar(50)
+  updated_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Contest_creation {
+  creation_id int [pk, increment]
+  created_by int [not null]
+  contest_id int [not null]
+}
+
+Table User_participant {
+  user_participant_id int [pk, increment]
+  contest_id int [not null]
+  user_id int [not null]
+  joined_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table Group_creation {
+  grp_crt_id int [pk, increment]
+  created_by int [not null]
+  group_id int [not null]
+}
+
+Table Fav_prob {
+  fav_prob_id int [pk, increment]
+  user_id int [not null]
+   problem_id int [not null] 
+}
+
+
+Table Notification {
+  notification_id  int       [pk, increment]
+  user_id          int       [not null, ref: > User.user_id]
+  type             varchar   [not null]            // e.g. "recommendation", "contest_start", "track_update"
+  reference_id     int                           // polymorphic FK: problem_id, contest_id, track_id, etc.
+  title            varchar   [not null]            // short headline
+  message          text      [not null]            // detailed content
+  is_read          boolean   [default: false]
+  created_at       datetime  [default: `CURRENT_TIMESTAMP`]
+  read_at          datetime
+  group_id         int      [ref: > "Group".group_id] 
+
+
+
+}
+Table Personal_Record {                    
+  record_id        int       [pk, increment]  
+  user_id          int       [not null, ref: > User.user_id]    
+  problem_id       int       [not null, ref: > Problem.problem_id]  
+  status           varchar   [not null, default: 'attempted']    
+    // 'attempted', 'solved'
+  attempts_count   int       [not null, default: 0]            
+  first_attempted  datetime  [default: `CURRENT_TIMESTAMP`]    
+  last_attempted   datetime                                  
+  solved_at        datetime                                  
+  
+  indexes {
+    (user_id, problem_id) [unique]                           
+  }
+}
+// References
+Ref: Problem.source_oj_id > Online_judge.judge_id
+Ref: Problem_tag.problem_id > Problem.problem_id
+Ref: Problem_tag.tag_id > Tag.tag_id
+Ref: Submission.user_id > User.user_id
+Ref: Submission.problem_id > Problem.problem_id
+Ref: Contest_problem.contest_id > Contest.contest_id
+Ref: Contest_problem.problem_id > Problem.problem_id
+Ref: Contest_submission.contest_id > Contest.contest_id
+Ref: Contest_submission.submission_id > Submission.submission_id
+Ref: User_rating.user_id > User.user_id
+Ref: User_rating.contest_id > Contest.contest_id
+Ref: Group_member.group_id > Group.group_id
+Ref: Group_member.user_id > User.user_id
+Ref: Discussion_thread.created_by > User.user_id
+Ref: Discussion_post.dissthread_id > Discussion_thread.dissthread_id
+Ref: Discussion_post.user_id > User.user_id
+Ref: Problem_Editorial.problem_id > Problem.problem_id
+Ref: Problem_Editorial.created_by > User.user_id
+Ref: User_badge.badge_id > Badge.badge_id
+Ref: User_badge.user_id > User.user_id
+Ref: Follow.follower_id > User.user_id
+Ref: Follow.followee_id > User.user_id
+Ref: Recommendation.user_id > User.user_id
+Ref: Recommendation.problem_id > Problem.problem_id
+Ref: Track_problem.track_id > Track.track_id
+Ref: Track_problem.problem_id > Problem.problem_id
+Ref: User_track_progress.user_id > User.user_id
+Ref: User_track_progress.track_id > Track.track_id
+Ref: Contest_creation.created_by > User.user_id
+Ref: Contest_creation.contest_id > Contest.contest_id
+Ref: User_participant.contest_id > Contest.contest_id
+Ref: User_participant.user_id > User.user_id
+Ref: Group_creation.created_by > User.user_id
+Ref: Group_creation.group_id > Group.group_id
+Ref: Fav_prob.user_id> User.user_id 
+Ref:  Fav_prob.problem_id >Problem.problem_id
+
+
+
+
+
