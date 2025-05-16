@@ -5,7 +5,7 @@ function ProblemList() {
   const [problems, setProblems] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/problems")
+    fetch("/api/problems") // thanks to your Vite proxy
       .then((res) => res.json())
       .then((data) => setProblems(data))
       .catch((err) => console.error("Failed to fetch problems:", err));
@@ -21,13 +21,18 @@ function ProblemList() {
           {problems.map((p) => (
             <li key={p.external_id}>
               <Link
-                to={`/problem/${p.external_id}`} // ✅ Use Link, not <a>
+                to={`/problem/${p.external_id}`}
                 className="block cursor-pointer p-3 border border-sybil-accent rounded-xl transition-all duration-200 hover:bg-sybil-accent hover:text-sybil-panel hover:shadow-sybil-glow"
               >
-                <span className="block text-lg font-medium">{p.title}</span>
-                <span className="text-sm opacity-75">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-medium">{p.title}</span>
+                  <span className="text-sm italic text-gray-400">
+                    {p.source_name}
+                  </span>
+                </div>
+                <div className="mt-1 text-sm opacity-75">
                   {p.difficulty || "Unrated"}
-                </span>
+                </div>
               </Link>
             </li>
           ))}
