@@ -22,15 +22,15 @@ app.get("/", async (req, res) => {
   res.json({ message: "OK", time: rows[0].now });
 });
 
-const judgeRoutes   = require("./routes/judgeRoutes");
+const judgeRoutes = require("./routes/judgeRoutes");
 // Sync   (POST /api/sync)
-const syncRoutes    = require("./routes/syncRoutes");
+const syncRoutes = require("./routes/syncRoutes");
 // Problems (GET /api/problems, GET /api/problems/:external_id)
 const problemRoutes = require("./routes/problemRoutes");
 
-app.use("/api/judges",   judgeRoutes);
-app.use("/api/sync",      syncRoutes);
-app.use("/api/problems",  problemRoutes);
+app.use("/api/judges", judgeRoutes);
+app.use("/api/sync", syncRoutes);
+app.use("/api/problems", problemRoutes);
 // Start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
