@@ -1,11 +1,12 @@
+// frontend/client/src/components/ProblemPage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
 const TABS = ["Statement", "Input", "Output", "Examples"];
 const LANGUAGES = [
-  { id: "cpp", name: "C++ (GCC 11)" },
+  { id: "cpp",    name: "C++ (GCC 11)" },
   { id: "python", name: "Python 3.10" },
-  { id: "java", name: "Java 17" },
+  { id: "java",   name: "Java 17" },
 ];
 
 function SampleExample({ html }) {
@@ -15,12 +16,10 @@ function SampleExample({ html }) {
     const pres = ref.current.querySelectorAll("pre");
     pres.forEach((pre) => {
       if (pre.parentNode.querySelector(".copy-btn")) return;
-      // wrap in relative container
       const wrapper = document.createElement("div");
       wrapper.className = "relative group mb-4";
       pre.parentNode.insertBefore(wrapper, pre);
       wrapper.appendChild(pre);
-      // copy button
       const btn = document.createElement("button");
       btn.textContent = "Copy";
       btn.className =
@@ -46,22 +45,22 @@ function SampleExample({ html }) {
 export default function ProblemPage() {
   const { external_id } = useParams();
   const navigate = useNavigate();
-  const [problem, setProblem] = useState(null);
-  const [wrapper, setWrapper] = useState(null);
+  const [problem,   setProblem] = useState(null);
+  const [wrapper,   setWrapper] = useState(null);
   const [activeTab, setActiveTab] = useState("Statement");
-  const [submitOpen, setSubmitOpen] = useState(false);
-  const [language, setLanguage] = useState(LANGUAGES[0].id);
-  const [code, setCode] = useState("");
-  const [file, setFile] = useState(null);
+  const [submitOpen,setSubmitOpen] = useState(false);
+  const [language,  setLanguage] = useState(LANGUAGES[0].id);
+  const [code,      setCode]     = useState("");
+  const [file,      setFile]     = useState(null);
 
-  // Fetch problem and wrap HTML
+  // Fetch and wrap HTML
   useEffect(() => {
-    fetch(`http://localhost:5000/api/problems/${external_id}`)
+    fetch(`/api/problems/${external_id}`)
       .then((r) => r.json())
       .then((data) => {
         setProblem(data);
         const div = document.createElement("div");
-        div.innerHTML = data.statement_html;
+        div.innerHTML = data.statement_html || "";
         setWrapper(div);
       })
       .catch(() => setProblem(null));
@@ -71,43 +70,53 @@ export default function ProblemPage() {
     return <div className="p-10 text-center text-sybil-text">Loading…</div>;
   }
 
-  // Extract sections
-  const inputSpec = wrapper.querySelector(".input-specification");
-  let stmtHTML = "";
-  if (inputSpec) {
-    let node = wrapper.firstChild;
-    while (node && node !== inputSpec) {
-      stmtHTML += node.outerHTML ?? node.textContent;
-      node = node.nextSibling;
-    }
-  } else {
-    stmtHTML = wrapper.innerHTML;
-  }
-  const inputHTML = inputSpec?.outerHTML || "<p>No input specification.</p>";
-  const outputSpec = wrapper.querySelector(".output-specification");
-  const outputHTML = outputSpec?.outerHTML || "<p>No output specification.</p>";
-  const sampleHTMLs = Array.from(wrapper.querySelectorAll(".sample-test")).map(
-    (n) => n.outerHTML
-  );
+  // Determine if source is SPOJ
+  const isSpoj = problem.source_name === "SPOJ";
 
-  // Handlers
+  // Prepare tab contents
+  let stmtHTML = "", inputHTML = "", outputHTML = "", sampleHTMLs = [];
+  if (isSpoj) {
+    // SPOJ: dump all into Statement
+    stmtHTML = wrapper.innerHTML;
+    inputHTML = "<p>—</p>";
+    outputHTML = "<p>—</p>";
+    sampleHTMLs = [];
+  } else {
+    // CF/AtCoder: split by their classes
+    const inputSpec = wrapper.querySelector(".input-specification");
+    if (inputSpec) {
+      let node = wrapper.firstChild;
+      while (node && node !== inputSpec) {
+        stmtHTML += node.outerHTML ?? node.textContent;
+        node = node.nextSibling;
+      }
+    } else {
+      stmtHTML = wrapper.innerHTML;
+    }
+    inputHTML = inputSpec?.outerHTML || "<p>No input specification.</p>";
+    const outputSpec = wrapper.querySelector(".output-specification");
+    outputHTML = outputSpec?.outerHTML || "<p>No output specification.</p>";
+    sampleHTMLs = Array.from(
+      wrapper.querySelectorAll(".sample-test")
+    ).map((n) => n.outerHTML);
+  }
+
+  // File vs code
   const onFileChange = (e) => {
     setFile(e.target.files[0]);
     setCode("");
   };
   const handleSubmit = () => {
-    // TODO: send { external_id, language, code/file } to backend
     console.log("Submit:", { external_id, language, code, file });
     setSubmitOpen(false);
   };
 
-  // Render tab content
+  // Tab renderer
   const renderTab = () => {
     switch (activeTab) {
       case "Statement":
         return (
           <>
-            {/* Metadata badges */}
             <div className="flex flex-wrap gap-2 mb-4">
               <span className="px-2 py-1 bg-sybil-accent text-sybil-bg rounded">
                 Difficulty: {problem.difficulty || "Unrated"}
@@ -125,7 +134,6 @@ export default function ProblemPage() {
             />
           </>
         );
-
       case "Input":
         return (
           <div
@@ -133,7 +141,6 @@ export default function ProblemPage() {
             dangerouslySetInnerHTML={{ __html: inputHTML }}
           />
         );
-
       case "Output":
         return (
           <div
@@ -141,7 +148,6 @@ export default function ProblemPage() {
             dangerouslySetInnerHTML={{ __html: outputHTML }}
           />
         );
-
       case "Examples":
         return sampleHTMLs.length ? (
           <div>
@@ -152,7 +158,6 @@ export default function ProblemPage() {
         ) : (
           <p className="text-sybil-text">No examples available.</p>
         );
-
       default:
         return null;
     }
