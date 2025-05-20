@@ -74,7 +74,7 @@ async function fetchSPOJ(limit = 10) {
       external_id:    code,
       title,
       url:            `https://www.spoj.com/problems/${code}/`,
-      difficulty:     null,
+      difficulty:     rating?.toString() || null,
       time_limit:     1000,
       mem_limit:      1536 * 1024,
       statement_html,

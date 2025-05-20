@@ -5,10 +5,13 @@ const { fetchCodeforces } = require("../fetchers/codeforces");
 const { fetchAtCoder } = require("../fetchers/atcoder");
 const { fetchSPOJ } = require("../fetchers/spoj");
 
+const { fetchCodeChef }    = require("../fetchers/CodeChef");
+
 const FETCHERS = {
   1: fetchCodeforces,
   2: fetchAtCoder,
   3: fetchSPOJ,
+  4: fetchCodeChef,
 };
 
 const router = express.Router();

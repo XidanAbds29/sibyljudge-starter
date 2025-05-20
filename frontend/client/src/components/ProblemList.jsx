@@ -7,6 +7,7 @@ const JUDGES = [
   { id: "1", name: "Codeforces" },
   { id: "2", name: "AtCoder"   },
   { id: "3", name: "SPOJ"      },
+  { id: 4,  name: "CodeChef"  },
 ];
 
 export default function ProblemList() {

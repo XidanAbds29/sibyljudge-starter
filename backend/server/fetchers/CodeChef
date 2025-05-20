@@ -1,0 +1,77 @@
+// backend/server/fetchers/CodeChef.js
+const axios = require("axios");
+const cheerio = require("cheerio");
+const { wrapper } = require("axios-cookiejar-support");
+const { CookieJar } = require("tough-cookie");
+const puppeteer = require("puppeteer");
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Wrap for cookies to reduce blocking
+const client = wrapper(axios.create());
+
+async function fetchStatement(url) {
+  const jar = new CookieJar();
+  jar.setCookieSync("cookieconsent_dismissed=true; Domain=codechef.com; Path=/", url);
+
+  try {
+    // try simple GET + cheerio
+    const { data: html } = await client.get(url, {
+      jar,
+      withCredentials: true,
+      headers: { "User-Agent": "Mozilla/5.0" },
+    });
+    const $ = cheerio.load(html);
+    const stmt = $(".problem-statement").html();
+    if (stmt) return stmt;
+    throw new Error("no statement");
+  } catch (_) {
+    // fallback to puppeteer
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.setUserAgent("Mozilla/5.0");
+    await page.goto(url, { waitUntil: "networkidle2" });
+    const stmt = await page.$eval(".problem-statement", (el) => el.innerHTML);
+    await browser.close();
+    return stmt;
+  }
+}
+
+async function fetchCodeChef(limit = 10) {
+  console.log(`🔍 fetching CodeChef practice (limit=${limit})`);
+  const base = "https://www.codechef.com/practice";
+  const { data: html } = await axios.get(base);
+  const $ = cheerio.load(html);
+
+  // grab the first <limit> problem links inside the "Practice" table
+  const rows = $("table.problems tbody tr").slice(0, limit);
+  const results = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const tr = rows[i];
+    const tds = $(tr).find("td");
+    const link = tds.eq(1).find("a");
+    const code  = link.text().trim();
+    const path  = link.attr("href");           // e.g. "/problems/FLOW001/"
+    const title = tds.eq(2).text().trim();     // problem title
+    const url   = `https://www.codechef.com${path}`;
+
+    // scrape statement
+    const statement_html = await fetchStatement(url);
+    await delay(2000);
+
+    results.push({
+      source_oj_id: 4,      // you'll assign CodeChef id = 4 in your online_judge table
+      external_id:  code,
+      title,
+      url,
+      difficulty: null,     // CodeChef practice page doesn't show rating on list
+      time_limit: 2000,     // default 2s
+      mem_limit: 1536 * 1024,
+      statement_html,
+    });
+  }
+
+  return results;
+}
+
+module.exports = { fetchCodeChef };
