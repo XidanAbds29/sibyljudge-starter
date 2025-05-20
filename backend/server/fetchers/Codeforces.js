@@ -6,6 +6,7 @@ const { wrapper } = require("axios-cookiejar-support");
 const { CookieJar } = require("tough-cookie");
 const cheerio = require("cheerio");
 const puppeteer = require("puppeteer");
+const { scrapeProblem } = require("./shared/scraper");
 
 // Wrap axios to support cookies
 const axios = wrapper(axiosBase);
@@ -14,98 +15,103 @@ const axios = wrapper(axiosBase);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Fetch the HTML statement of a Codeforces problem.
- * Falls back to Puppeteer if blocked or not found via HTTP.
- *
- * @param {number} contestId
- * @param {string} index
- * @returns {string|null} HTML content of the .problem-statement
+ * Fetch problem sections from Codeforces
  */
-async function fetchStatement(contestId, index) {
+async function fetchSections(contestId, index) {
   const url = `https://codeforces.com/contest/${contestId}/problem/${index}`;
-  const jar = new CookieJar();
-  // Set a dummy cookie to reduce blocking
-  jar.setCookieSync("RCPC=1; Domain=codeforces.com; Path=/", url);
 
   try {
-    const { data: html } = await axios.get(url, {
-      jar,
-      withCredentials: true,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        Connection: "keep-alive",
-        Referer: "https://codeforces.com/",
+    console.log(`Fetching problem sections from ${url}`);
+    const sections = await scrapeProblem(url, {
+      selectors: {
+        main: ".problem-statement",
+        statement: [
+          ".problem-statement > div:nth-child(2)",
+          ".problem-statement > .tex-font-style-normal:not(.title,.time-limit,.memory-limit,.input-file,.output-file)",
+        ].join(","),
+        input: [
+          ".input-specification > div:not(.section-title)",
+          ".input-specification .tex-font-style-normal",
+          '.problem-statement > div:contains("Input")',
+        ].join(","),
+        output: [
+          ".output-specification > div:not(.section-title)",
+          ".output-specification .tex-font-style-normal",
+          '.problem-statement > div:contains("Output")',
+        ].join(","),
+        sampleSelectors: {
+          input: ".sample-test .input pre",
+          output: ".sample-test .output pre",
+        },
       },
-      timeout: 10000,
     });
 
-    const $ = cheerio.load(html);
-    const stmt = $(".problem-statement").html();
-    if (stmt) return stmt;
-    throw new Error("No .problem-statement found");
-  } catch (err) {
-    const status = err.response?.status;
-    // Fallback to Puppeteer on 403 or missing statement
-    if (status === 403 || /No \.problem-statement/.test(err.message)) {
-      console.log(`🔄 Puppeteer fallback for ${contestId}${index}`);
-      const browser = await puppeteer.launch({ headless: true });
-      const page = await browser.newPage();
-      await page.setUserAgent(
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-      );
-      await page.goto(url, { waitUntil: "networkidle2" });
-      const statementHtml = await page.$eval(
-        ".problem-statement",
-        (el) => el.innerHTML
-      );
-      await browser.close();
-      return statementHtml;
+    if (!sections) {
+      throw new Error("No sections found");
     }
-    console.error(
-      `❌ fetchStatement failed for ${contestId}${index}:`,
-      err.message
-    );
+
+    return sections;
+  } catch (err) {
+    console.error(`Error fetching problem ${contestId}${index}:`, err.message);
     return null;
   }
 }
 
 /**
- * Fetch a batch of Codeforces problems (metadata + statements).
- *
- * @param {number} limit Number of problems to fetch (default 10)
- * @returns {Promise<Array>} Array of problem objects matching DB schema
+ * Fetch a batch of Codeforces problems
  */
 async function fetchCodeforces(limit = 10) {
-  // 1) Get metadata from API
-  const { data } = await axiosBase.get(
-    "https://codeforces.com/api/problemset.problems"
-  );
-  const problems = data.result.problems.slice(0, limit);
-  const results = [];
+  try {
+    console.log("Fetching problems from Codeforces API...");
+    const { data } = await axios.get(
+      "https://codeforces.com/api/problemset.problems"
+    );
 
-  for (let p of problems) {
-    const { contestId, index, name, rating, timeLimitSeconds } = p;
-    // 2) Scrape statement HTML
-    const statementHtml = await fetchStatement(contestId, index);
-    await delay(2000);
+    if (!data?.result?.problems) {
+      throw new Error("Invalid API response");
+    }
 
-    results.push({
-      source_oj_id: 1, // Codeforces judge_id
-      external_id: `${contestId}${index}`,
-      title: name,
-      url: `https://codeforces.com/contest/${contestId}/problem/${index}`,
-      difficulty: rating?.toString() || null,
-      time_limit: (timeLimitSeconds || 1) * 1000,
-      mem_limit: 512 * 1024,
-      statement_html: statementHtml,
-    });
+    const problems = data.result.problems.slice(0, limit);
+    const results = [];
+
+    for (const problem of problems) {
+      try {
+        console.log(`Processing problem ${problem.contestId}${problem.index}`);
+
+        const sections = await fetchSections(problem.contestId, problem.index);
+        await delay(2000); // Be nice to CF servers
+
+        if (sections) {
+          results.push({
+            source_oj_id: 1,
+            external_id: `${problem.contestId}${problem.index}`,
+            title: problem.name,
+            url: `https://codeforces.com/contest/${problem.contestId}/problem/${problem.index}`,
+            difficulty: problem.rating?.toString() || null,
+            time_limit: (problem.timeLimit || 1) * 1000,
+            mem_limit: (problem.memoryLimit || 256) * 1024,
+            statement_html: sections.statement,
+            input_spec: sections.input,
+            output_spec: sections.output,
+            samples: sections.samples || [],
+            tags: problem.tags || [],
+          });
+          console.log(`✓ Added problem: ${problem.name}`);
+        }
+      } catch (err) {
+        console.error(
+          `Error processing problem ${problem.contestId}${problem.index}:`,
+          err.message
+        );
+      }
+    }
+
+    console.log(`Fetched ${results.length} problems from Codeforces`);
+    return results;
+  } catch (err) {
+    console.error("Error fetching from Codeforces:", err);
+    return [];
   }
-
-  return results;
 }
 
 module.exports = { fetchCodeforces };

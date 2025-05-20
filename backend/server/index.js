@@ -33,11 +33,13 @@ console.log("🛣️ Loading routes...");
 const judgeRoutes = require("./routes/judgeRoutes");
 const syncRoutes = require("./routes/syncRoutes");
 const problemRoutes = require("./routes/problemRoutes");
+const submissionRoutes = require("./routes/submissionRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use("/api/judges", judgeRoutes);
 app.use("/api/sync", syncRoutes);
 app.use("/api/problems", problemRoutes);
+app.use("/api/submissions", submissionRoutes);
 console.log("✅ All routes mounted");
 
 // ─── Start Server ────────────────────────────────

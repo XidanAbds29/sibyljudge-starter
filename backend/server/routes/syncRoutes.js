@@ -5,7 +5,7 @@ const { fetchCodeforces } = require("../fetchers/codeforces");
 const { fetchAtCoder } = require("../fetchers/atcoder");
 const { fetchSPOJ } = require("../fetchers/spoj");
 
-const { fetchCodeChef }    = require("../fetchers/CodeChef");
+const { fetchCodeChef } = require("../fetchers/CodeChef");
 
 const FETCHERS = {
   1: fetchCodeforces,
@@ -31,8 +31,8 @@ router.post("/", async (req, res) => {
       await pool.query(
         `INSERT INTO problem
            (source_oj_id, external_id, title, url, difficulty, time_limit,
-            mem_limit, statement_html, fetched_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP)
+            mem_limit, statement_html, input_spec, output_spec, samples, fetched_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP)
          ON CONFLICT (source_oj_id,external_id) DO UPDATE
            SET title          = EXCLUDED.title,
                url            = EXCLUDED.url,
@@ -40,6 +40,9 @@ router.post("/", async (req, res) => {
                time_limit     = EXCLUDED.time_limit,
                mem_limit      = EXCLUDED.mem_limit,
                statement_html = EXCLUDED.statement_html,
+               input_spec    = EXCLUDED.input_spec,
+               output_spec   = EXCLUDED.output_spec,
+               samples       = EXCLUDED.samples,
                fetched_at     = CURRENT_TIMESTAMP`,
         [
           p.source_oj_id,
@@ -49,6 +52,10 @@ router.post("/", async (req, res) => {
           p.difficulty,
           p.time_limit,
           p.mem_limit,
+          p.sections?.statement || p.statement_html,
+          p.sections?.input,
+          p.sections?.output,
+          JSON.stringify(p.sections?.samples || []),
           p.statement_html,
         ]
       );
