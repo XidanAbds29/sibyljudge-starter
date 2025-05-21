@@ -56,7 +56,8 @@ CREATE TABLE Submission (
   status         VARCHAR(50),
   exec_time      FLOAT,
   submitted_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  verdict_detail TEXT
+  verdict_detail TEXT,
+  solution_code  TEXT
 );
 
 -- Contests
