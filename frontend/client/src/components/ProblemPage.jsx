@@ -3,19 +3,18 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import MonacoEditor from "@monaco-editor/react";
-import { createClient } from "@supabase/supabase-js";
+// Ensure this path is correct based on where you saved AuthContext.jsx
+import { useAuth } from "./AuthContext"; // Or ../contexts/AuthContext
 
-// --- Supabase Client Initialization ---
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-let supabase = null;
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  // console.log("ProblemPage: Supabase client initialized.");
-} else {
-  console.error("ProblemPage: Supabase URL or Key is missing. Check .env file and VITE_ prefix.");
-}
+// --- Supabase Client Initialization (now primarily from context) ---
+// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+// const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// let supabase = null;
+// if (supabaseUrl && supabaseKey) {
+//   supabase = createClient(supabaseUrl, supabaseKey);
+// } else {
+//   console.error("ProblemPage: Supabase URL or Key is missing.");
+// }
 // --- End Supabase Client Initialization ---
 
 const TABS = [
@@ -31,6 +30,9 @@ const LANGUAGES = [
   { id: "python", name: "Python 3.10", template: "# Your Python solution here\n\ndef solve():\n    pass\n\nif __name__ == '__main__':\n    solve()", monacoLang: "python" },
   { id: "java", name: "Java 17", template: "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}", monacoLang: "java" },
 ];
+
+const DEFAULT_TIME_LIMIT_MS = 2000;
+const DEFAULT_MEMORY_LIMIT_KB = 262144;
 
 // --- Helper Components ---
 
@@ -117,25 +119,25 @@ const TestRunner = ({ language, code }) => {
   return ( <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4" > <div className="grid grid-cols-1 md:grid-cols-2 gap-4"> <div className="relative group"> <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-sky-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" /> <div className="relative"> <h3 className="text-cyan-400 mb-2 flex items-center gap-2 font-semibold"> <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /> </svg> Input </h3> <textarea value={input} onChange={(e) => setInput(e.target.value)} disabled={isRunning} className="w-full h-40 p-3 bg-gray-800/70 border border-cyan-700/60 rounded-lg font-mono resize-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-gray-300 placeholder-gray-500" placeholder="Enter test input here..." /> </div> </div> <div className="relative group"> <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-sky-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" /> <div className="relative"> <h3 className="text-cyan-400 mb-2 flex items-center gap-2 font-semibold"> <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" > <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /> </svg> Output </h3> <pre className={`w-full h-40 p-3 bg-gray-800/70 border border-cyan-700/60 rounded-lg font-mono overflow-auto whitespace-pre-wrap ${ isRunning ? "animate-pulse opacity-60" : "" } transition-all duration-300 text-gray-300`} > {output || "Output will appear here..."} </pre> </div> </div> </div> <motion.button onClick={runTest} disabled={isRunning} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className={` w-full px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 ${ isRunning ? "bg-cyan-700/50 cursor-not-allowed" : "bg-cyan-600 hover:bg-cyan-500 hover:shadow-[0_0_15px_rgba(56,189,248,0.6)]" } text-white transition-all duration-300 `} > {isRunning ? ( <> <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" > <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /> </svg> Running Test... </> ) : ( <> <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" > <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /> </svg> Run Test </> )} </motion.button> </motion.div> );
 };
 
-const SubmissionHistory = ({ problemId, supabase, currentUser }) => {
+const SubmissionHistory = ({ problemId, supabase: propSupabase, currentUser }) => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchHistory = async () => {
-      if (!supabase || !problemId) { setLoading(false); return; }
+      if (!propSupabase || !problemId) { setLoading(false); return; }
       if (!currentUser) { setSubmissions([]); setLoading(false); return; }
       setLoading(true); setError("");
       try {
-        const { data, error: dbError } = await supabase.from("Submission").select("submission_id, submitted_at, language, status, exec_time, memory_used").eq("problem_id", problemId).eq("user_id", currentUser.id).order("submitted_at", { ascending: false }).limit(20);
+        const { data, error: dbError } = await propSupabase.from("Submission").select("submission_id, submitted_at, language, status, exec_time, memory_used").eq("problem_id", problemId).eq("user_id", currentUser.id).order("submitted_at", { ascending: false }).limit(20);
         if (dbError) throw dbError;
         setSubmissions(data || []);
       } catch (err) { console.error("Failed to fetch submission history:", err); setError(`Failed to load history: ${err.message}`); setSubmissions([]); } 
       finally { setLoading(false); }
     };
     fetchHistory();
-  }, [problemId, supabase, currentUser]);
+  }, [problemId, propSupabase, currentUser]);
 
   if (loading) return <div className="text-center py-4"><div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-400"></div></div>;
   if (error) return <p className="text-red-400 text-center py-4">{error}</p>;
@@ -176,35 +178,38 @@ function ParsedHtmlContent({ htmlContent, className = "prose prose-sm sm:prose-b
             btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`;
             btn.className = "copy-btn absolute top-2 right-2 px-2 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-gray-200 opacity-0 group-hover:opacity-100 transition-all duration-300 z-10 flex items-center gap-1 shadow";
             
+            const fallbackCopyToClipboardOnClick = (text, buttonElement) => {
+                const textArea = document.createElement("textarea"); textArea.value = text; textArea.style.position = "fixed"; textArea.style.top = "-9999px"; textArea.style.left = "-9999px"; document.body.appendChild(textArea); textArea.focus(); textArea.select();
+                try { document.execCommand('copy'); buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>Copied!`; setTimeout(() => {buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`;}, 2000); } 
+                catch (err) { console.error('Fallback copy failed: ', err); buttonElement.innerHTML = 'Error'; setTimeout(() => {buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`;}, 2000); }
+                document.body.removeChild(textArea);
+            };
+
             btn.onclick = () => {
                 const textToCopy = pre.innerText;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>Copied!`;
                         setTimeout(() => { btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`; }, 2000);
-                    }).catch(err => { console.error('navigator.clipboard.writeText failed: ', err); fallbackCopyToClipboard(textToCopy, btn); });
+                    }).catch(err => { console.error('navigator.clipboard.writeText failed: ', err); fallbackCopyToClipboardOnClick(textToCopy, btn); });
                 } else { 
-                    fallbackCopyToClipboard(textToCopy, btn);
+                    fallbackCopyToClipboardOnClick(textToCopy, btn);
                 }
-            };
-            const fallbackCopyToClipboard = (text, buttonElement) => {
-                const textArea = document.createElement("textarea"); textArea.value = text; document.body.appendChild(textArea); textArea.select();
-                try { document.execCommand('copy'); buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>Copied!`; setTimeout(() => {buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`;}, 2000); } 
-                catch (err) { console.error('Fallback copy failed: ', err); buttonElement.innerHTML = 'Error'; setTimeout(() => {buttonElement.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>Copy`;}, 2000); }
-                document.body.removeChild(textArea);
             };
             wrapper.appendChild(btn);
         });
     } catch (e) { console.error("Error adding copy buttons to <pre> tags:", e); }
   }, [htmlContent]);
 
-  return <div ref={contentRef} key={htmlContent ? htmlContent.substring(0,100) + htmlContent.length : Date.now()} className={className} />;
+  return <div ref={contentRef} key={htmlContent ? 'parsed-' + htmlContent.length : 'empty-' + Date.now()} className={className} />;
 }
 
 // --- Main ProblemPage Component ---
 export default function ProblemPage() {
   const { external_id } = useParams();
   const navigate = useNavigate();
+  const { user: authUser, supabase: supabaseFromAuth } = useAuth(); // Get user & supabase client from AuthContext
+
   const [problem, setProblem] = useState(null);
   const [activeTab, setActiveTab] = useState("Statement");
   const [submitOpen, setSubmitOpen] = useState(false);
@@ -215,21 +220,27 @@ export default function ProblemPage() {
   const [verdict, setVerdict] = useState(null); 
   const [loadingProblem, setLoadingProblem] = useState(true);
   const [errorProblem, setErrorProblem] = useState("");
-  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Use the supabase client from AuthContext if available, otherwise the local one (fallback if context not ready)
+  const effectiveSupabase = supabaseFromAuth || supabase;
 
   useEffect(() => {
-    const getUserAndProblem = async () => {
-      if (!supabase) { setErrorProblem("Supabase client not available."); setLoadingProblem(false); return; }
-      setLoadingProblem(true); setErrorProblem("");
-
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-
+    const fetchProblemDetails = async () => {
+      if (!effectiveSupabase) { setErrorProblem("Supabase client not available."); setLoadingProblem(false); return; }
       if (!external_id) { setErrorProblem("Problem ID missing."); setLoadingProblem(false); return; }
+      
+      setLoadingProblem(true); setErrorProblem("");
       try {
-        const { data: problemData, error: problemFetchError } = await supabase.from("Problem").select(`*, Online_judge ( name ), Problem_tag ( Tag ( name ) )`).eq("external_id", external_id).single();
-        if (problemFetchError) throw problemFetchError;
-        if (problemData) {
+        const { data: problemData, error: problemFetchError } = await effectiveSupabase.from("Problem").select(`*, Online_judge ( name ), Problem_tag ( Tag ( name ) )`).eq("external_id", external_id).single();
+        
+        if (problemFetchError) {
+            if (problemFetchError.code === 'PGRST116') { // Resource Not Found (e.g. .single() found no rows)
+                 setErrorProblem(`Problem with ID "${external_id}" not found.`);
+            } else {
+                throw problemFetchError; // Re-throw other errors
+            }
+            setProblem(null);
+        } else if (problemData) {
           const formattedProblem = {
             ...problemData,
             source_name: problemData.Online_judge ? problemData.Online_judge.name : "N/A",
@@ -238,17 +249,26 @@ export default function ProblemPage() {
           };
           setProblem(formattedProblem);
           const initialLang = LANGUAGES.find((l) => l.id === language) || LANGUAGES[0];
-          // Only set template if code is empty or still the default template of *some* language
+          // Only set template if code is empty or still the default template of ANY language
           // This prevents overwriting user's typed code if they just switch tabs and come back
           if (!code || LANGUAGES.some(l => l.template === code)) {
             setCode(initialLang.template);
           }
-        } else { setErrorProblem("Problem not found."); setProblem(null); }
-      } catch (err) { console.error("Failed to fetch problem from Supabase:", err); setErrorProblem(`Failed to load problem: ${err.message}`); setProblem(null); } 
+        } else { 
+            setErrorProblem(`Problem with ID "${external_id}" not found.`); 
+            setProblem(null); 
+        }
+      } catch (err) { 
+        console.error("Failed to fetch problem from Supabase:", err); 
+        setErrorProblem(`Failed to load problem: ${err.message}`); 
+        setProblem(null); 
+      } 
       finally { setLoadingProblem(false); }
     };
-    getUserAndProblem();
-  }, [external_id]); // Only refetch problem if external_id changes
+    if (effectiveSupabase) { // Only fetch if supabase client is available
+        fetchProblemDetails();
+    }
+  }, [external_id, effectiveSupabase]); // Removed language, code from deps, they are handled by their own setters
 
   const onFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -259,12 +279,14 @@ export default function ProblemPage() {
     const newLangId = e.target.value;
     setLanguage(newLangId);
     const currentLangTemplate = LANGUAGES.find((l) => l.id === newLangId)?.template;
-    if (!file) { setCode(currentLangTemplate || ""); } // Only set template if no file is selected
+    if (!file) { // Only change editor content if no file is selected
+        setCode(currentLangTemplate || ""); 
+    }
   };
   
   const handleSubmit = async () => {
-    if (!supabase) { setVerdict({ status: "Error", message: "Supabase not initialized." }); setShowVerdict(true); setTimeout(() => setShowVerdict(false), 3000); return; }
-    if (!currentUser) { setVerdict({ status: "Error", message: "You must be logged in to submit." }); setShowVerdict(true); setTimeout(() => setShowVerdict(false), 3000); return; }
+    if (!effectiveSupabase) { setVerdict({ status: "Error", message: "Supabase not initialized." }); setShowVerdict(true); setTimeout(() => setShowVerdict(false), 3000); return; }
+    if (!authUser) { setVerdict({ status: "Error", message: "You must be logged in to submit." }); setShowVerdict(true); setTimeout(() => setShowVerdict(false), 3000); return; }
     if (!problem || !problem.problem_id) { setVerdict({ status: "Error", message: "Problem data not loaded." }); setShowVerdict(true); setTimeout(() => setShowVerdict(false), 3000); return; }
 
     let sourceCode = code;
@@ -273,12 +295,12 @@ export default function ProblemPage() {
 
     setVerdict({ status: "Submitting..." }); setShowVerdict(true);
     try {
-      const submissionData = { user_id: currentUser.id, problem_id: problem.problem_id, language: language, solution_code: sourceCode, status: "Pending" };
-      const { data: newSubmission, error } = await supabase.from("Submission").insert(submissionData).select().single();
+      const submissionData = { user_id: authUser.id, problem_id: problem.problem_id, language: language, solution_code: sourceCode, status: "Pending" };
+      const { data: newSubmission, error } = await effectiveSupabase.from("Submission").insert(submissionData).select().single();
       if (error) throw error;
       console.log("Submission successful:", newSubmission);
       setVerdict({ status: "Queued", message: `Submission ID: ${newSubmission.submission_id}. It's in the queue.` });
-      // To refresh submission history, one could trigger a refetch or manage state more globally
+      // Optionally, trigger a refetch of submission history here
     } catch (err) {
       console.error("Submit failed:", err);
       setVerdict({ status: "Error", message: `Submission Error: ${err.message}` });
@@ -292,107 +314,73 @@ export default function ProblemPage() {
   // Prepare content for tabs - this logic is inside the component body to access `problem` and `activeTab`
   let stmtHTML = "", inputHTML = "", outputHTML = "", samplesFromProblem = [];
   if (problem) {
-      // START: Logic to clean statement_html for the "Statement" tab
       const rawFullHtmlFromDb = problem.statement_html || "";
       if (rawFullHtmlFromDb) {
           try {
               const parser = new DOMParser();
               const doc = parser.parseFromString(rawFullHtmlFromDb, "text/html");
-              let contentNode = doc.querySelector('.problem-statement'); // Main container for problem content
+              let contentNode = doc.querySelector('.problem-statement');
+              if (!contentNode || !doc.body.contains(contentNode)) { contentNode = doc.body; }
               
               if (contentNode) {
                   const clonedNode = contentNode.cloneNode(true);
+                  const selectorsToRemove = ['.header', '.input-specification', '.output-specification', '.sample-tests', '.note'];
+                  selectorsToRemove.forEach(selector => { 
+                      clonedNode.querySelectorAll(selector).forEach(el => el.remove()); 
+                  });
                   
-                  // Remove known sections that should not be in the "Statement" tab
-                  const header = clonedNode.querySelector('.header'); // Contains time/memory limits
-                  if (header) header.remove();
-                  
-                  const inputSpecDiv = clonedNode.querySelector('.input-specification');
-                  if (inputSpecDiv) inputSpecDiv.remove();
-                  
-                  const outputSpecDiv = clonedNode.querySelector('.output-specification');
-                  if (outputSpecDiv) outputSpecDiv.remove();
-                  
-                  const sampleTestsDiv = clonedNode.querySelector('.sample-tests');
-                  if (sampleTestsDiv) sampleTestsDiv.remove();
-                  
-                  const noteDiv = clonedNode.querySelector('.note');
-                  if (noteDiv) noteDiv.remove();
-
-                  // Remove h3/h4 titles for Input, Output, Example, Note if they are direct children of .problem-statement
-                  // This is a bit more aggressive and assumes a certain structure.
-                  Array.from(clonedNode.children).forEach(child => {
-                      if (child.tagName.match(/^H[34]$/i)) {
-                          const childText = child.textContent.toLowerCase();
-                          if (childText.includes("input") || childText.includes("output") || childText.includes("example") || childText.includes("note")) {
-                              child.remove();
-                          }
+                  Array.from(clonedNode.children).forEach(child => { 
+                      if (child.tagName && child.tagName.match(/^H[1-6]$/i)) {
+                          const childText = child.textContent.toLowerCase().trim();
+                          const keywordsToRemove = ["input", "output", "example", "sample", "note", "time limit", "memory limit"];
+                          if (keywordsToRemove.some(keyword => childText.startsWith(keyword))) { child.remove(); }
                       }
                   });
-
                   stmtHTML = clonedNode.innerHTML.trim();
-              } else {
-                  // Fallback if .problem-statement div is not the top-level container of rawFullHtmlFromDb
-                  // This might happen if rawFullHtmlFromDb is already just the inner content.
-                  // In this case, we can't reliably remove sections by class from a string fragment without more context.
-                  // For now, we'll use the raw HTML and hope it's mostly statement.
-                  // A more robust solution is to ensure the scraper saves ONLY the narrative statement.
-                  stmtHTML = rawFullHtmlFromDb; 
-                  console.warn("ProblemPage: '.problem-statement' div not found in statement_html. Displaying raw content for Statement tab. Scraper should ideally provide cleaner statement_html.");
-              }
-          } catch (e) {
-              console.error("Error cleaning statement_html:", e);
-              stmtHTML = rawFullHtmlFromDb; // Fallback to raw on error
-          }
+              } else { stmtHTML = rawFullHtmlFromDb; }
+          } catch (e) { console.error("Error cleaning statement_html:", e); stmtHTML = rawFullHtmlFromDb; }
       }
-      if (!stmtHTML) {
-          stmtHTML = "<p class='italic text-gray-500'>Problem statement not available.</p>";
-      }
-      // END: Logic to clean statement_html
+      if (!stmtHTML) { stmtHTML = "<p class='italic text-gray-500'>Problem statement not available.</p>"; }
 
-      // Prepare inputHTML for the "Input" tab
-      // Prefer dedicated field, then try to extract from raw statement if dedicated is empty/short
       inputHTML = problem.input_spec || "";
-      if ((!inputHTML || inputHTML.length < 20) && rawFullHtmlFromDb) { // Check length as well
+      if ((!inputHTML || inputHTML.length < 20) && rawFullHtmlFromDb) { 
           const extractedInput = extractSpecificSection(rawFullHtmlFromDb, '.input-specification', "Input(?: Format)?");
           if (extractedInput) inputHTML = extractedInput;
       }
-      if (inputHTML && !inputHTML.trim().startsWith("<") && !inputHTML.trim().endsWith(">")) { inputHTML = `<p>${inputHTML.replace(/\n/g, "<br/>")}</p>`; }
-      else if (!inputHTML && activeTab === "Input") { inputHTML = "<p class='italic text-gray-500'>No specific input format provided. Check statement or examples.</p>"; }
+      if (inputHTML && !inputHTML.trim().startsWith("<") && !inputHTML.trim().endsWith(">")) { inputHTML = `<div class="font-mono whitespace-pre-wrap p-2 bg-gray-800/50 rounded-md border border-gray-700">${inputHTML.replace(/\n/g, "<br/>")}</div>`; }
+      else if (!inputHTML) { inputHTML = "<p class='italic text-gray-500'>No specific input format provided. Check statement or examples.</p>"; }
 
-      // Prepare outputHTML for the "Output" tab
       outputHTML = problem.output_spec || "";
-      if ((!outputHTML || outputHTML.length < 20) && rawFullHtmlFromDb) { // Check length
+      if ((!outputHTML || outputHTML.length < 20) && rawFullHtmlFromDb) { 
           const extractedOutput = extractSpecificSection(rawFullHtmlFromDb, '.output-specification', "Output(?: Format)?");
           if (extractedOutput) outputHTML = extractedOutput;
       }
-      if (outputHTML && !outputHTML.trim().startsWith("<") && !outputHTML.trim().endsWith(">")) { outputHTML = `<p>${outputHTML.replace(/\n/g, "<br/>")}</p>`; }
-      else if (!outputHTML && activeTab === "Output") { outputHTML = "<p class='italic text-gray-500'>No specific output format provided. Check statement or examples.</p>"; }
+      if (outputHTML && !outputHTML.trim().startsWith("<") && !outputHTML.trim().endsWith(">")) { outputHTML = `<div class="font-mono whitespace-pre-wrap p-2 bg-gray-800/50 rounded-md border border-gray-700">${outputHTML.replace(/\n/g, "<br/>")}</div>`; }
+      else if (!outputHTML) { outputHTML = "<p class='italic text-gray-500'>No specific output format provided. Check statement or examples.</p>"; }
       
       samplesFromProblem = problem.samples || [];
   }
 
 // Helper function to extract content of a specific div by class OR by heading text if class not found
-function extractSpecificSection(fullHtml, classSelector, headingText = null) {
+function extractSpecificSection(fullHtml, classSelector, headingTextRegexString = null) {
     if (!fullHtml) return null;
     try {
         const parser = new DOMParser();
         const doc = parser.parseFromString(fullHtml, "text/html");
         let sectionNode = doc.querySelector(classSelector);
-
         if (sectionNode) {
+            if (headingTextRegexString && sectionNode.firstElementChild && sectionNode.firstElementChild.tagName.match(/^H[1-6]$/i) && new RegExp(headingTextRegexString, "i").test(sectionNode.firstElementChild.textContent)) {
+                sectionNode.firstElementChild.remove();
+            }
             return sectionNode.innerHTML.trim();
-        } else if (headingText) {
-            // Fallback to find by heading if class selector fails
-            const headings = Array.from(doc.querySelectorAll("h1, h2, h3, h4, h5, h6, strong, b"));
-            const sectionHeading = headings.find(h => new RegExp(headingText, "i").test(h.textContent));
-            
+        } else if (headingTextRegexString) {
+            const headings = Array.from(doc.querySelectorAll("h1, h2, h3, h4, h5, h6, strong, b, div.section-title"));
+            const sectionHeading = headings.find(h => new RegExp(headingTextRegexString, "i").test(h.textContent));
             if (sectionHeading) {
                 let content = "";
                 let sibling = sectionHeading.nextElementSibling;
                 while (sibling) {
-                    if (sibling.tagName.match(/^H[1-6]$/i) || (sibling.tagName === 'DIV' && (sibling.classList.contains('sample-tests') || sibling.classList.contains('note')))) {
-                        // Stop if we hit another major heading or known section
+                    if (sibling.tagName.match(/^H[1-6]$/i) || (sibling.tagName === 'DIV' && (sibling.classList.contains('sample-tests') || sibling.classList.contains('note') || sibling.classList.contains('input-specification') || sibling.classList.contains('output-specification') || sibling.classList.contains('section-title')))) {
                         break;
                     }
                     content += sibling.outerHTML;
@@ -402,10 +390,7 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
             }
         }
         return null;
-    } catch (e) {
-        console.error(`Error extracting section ${classSelector || headingText}:`, e);
-        return null;
-    }
+    } catch (e) { console.error(`Error extracting section ${classSelector || headingTextRegexString}:`, e); return null; }
 }
 
 
@@ -416,7 +401,7 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
       case "Input": return <ParsedHtmlContent htmlContent={inputHTML} />;
       case "Output": return <ParsedHtmlContent htmlContent={outputHTML} />;
       case "Examples": return (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}> {samplesFromProblem.length > 0 ? (samplesFromProblem.map((sample, idx) => (<SampleTest key={idx} input={sample.input} output={sample.output} />))) : (<div className="text-center text-gray-400 py-4">No example test cases available.</div>)}</motion.div>);
-      case "Submissions": return problem.problem_id && currentUser ? <SubmissionHistory problemId={problem.problem_id} supabase={supabase} currentUser={currentUser} /> : <div className="text-center text-gray-400 py-4">{currentUser ? "Loading submissions..." : "Log in to view your submissions."}</div>;
+      case "Submissions": return problem.problem_id && authUser ? <SubmissionHistory problemId={problem.problem_id} supabase={effectiveSupabase} currentUser={authUser} /> : <div className="text-center text-gray-400 py-4">{authUser ? "Loading submissions..." : "Log in to view your submissions."}</div>;
       case "Test Runner": return <TestRunner language={LANGUAGES.find((l) => l.id === language)?.monacoLang || language} code={code} />;
       default: return null;
     }
@@ -451,7 +436,7 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
             {problem.title}
           </h1>
           <button 
-            onClick={() => { if (!currentUser) { alert("Please log in to submit a solution."); return; } setSubmitOpen(true); }} 
+            onClick={() => { if (!authUser) { alert("Please log in to submit a solution."); return; } setSubmitOpen(true); }} 
             className="self-end sm:self-center mt-3 sm:mt-0 px-5 py-2.5 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white font-semibold rounded-lg hover:from-cyan-400 hover:to-blue-500 focus:ring-4 focus:ring-cyan-500/50 focus:outline-none transition-all duration-300 relative z-10 shadow-md hover:shadow-lg hover:shadow-cyan-500/40 text-sm"
           >
             Submit Solution
@@ -490,8 +475,13 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
 
       <AnimatePresence>
         {submitOpen && problem && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/85 backdrop-blur-lg flex items-center justify-center z-[99] p-4">
-            <motion.div initial={{ scale: 0.95, opacity:0, y: 10 }} animate={{ scale: 1, opacity:1, y: 0 }} exit={{ scale: 0.95, opacity:0, y: 10 }} className="bg-gray-900 text-gray-300 p-6 rounded-xl shadow-2xl w-full max-w-5xl relative border-2 border-cyan-600/80 shadow-cyan-500/30">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/85 backdrop-blur-lg flex items-center justify-center z-[99] p-4 overflow-y-auto"> {/* Added overflow-y-auto */}
+            <motion.div 
+              initial={{ scale: 0.95, opacity:0, y: 10 }} 
+              animate={{ scale: 1, opacity:1, y: 0 }} 
+              exit={{ scale: 0.95, opacity:0, y: 10 }} 
+              className="bg-gray-900 text-gray-300 p-6 rounded-xl shadow-2xl w-full max-w-5xl relative border-2 border-cyan-600/80 shadow-cyan-500/30 my-8" // Added my-8 for vertical margin
+            >
               <button onClick={() => setSubmitOpen(false)} className="absolute top-3 right-4 text-gray-500 hover:text-cyan-400 transition text-3xl leading-none font-light">&times;</button>
               <h2 className="text-2xl font-bold text-cyan-400 mb-6 flex items-center gap-3" style={{ textShadow: '0 0 5px rgba(0, 255, 255, 0.5)'}}>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
@@ -508,7 +498,7 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 via-sky-500 to-pink-500 opacity-10 group-hover:opacity-25 transition duration-400 rounded-lg blur"></div>
                     <div className="relative">
                       <MonacoEditor 
-                        height="max(300px, calc(100vh - 560px))" 
+                        height="350px" // Fixed moderate height for editor
                         language={LANGUAGES.find((l) => l.id === language)?.monacoLang || 'plaintext'} 
                         theme="vs-dark" 
                         value={code} 
@@ -522,7 +512,7 @@ function extractSpecificSection(fullHtml, classSelector, headingText = null) {
                     <input type="file" accept=".cpp,.py,.java,.js,.txt" onChange={onFileChange} className="block mt-1 w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-gray-900 hover:file:bg-cyan-500 file:font-semibold text-gray-400 cursor-pointer"/>
                   </label>
                 </div>
-                <div className="border-l border-gray-700/60 pl-6 md:pt-0 pt-6">
+                <div className="border-l border-gray-700/60 pl-6 md:pt-0 pt-6 max-h-[500px] overflow-y-auto"> {/* Made TestRunner area scrollable */}
                   <h3 className="text-xl text-cyan-400 mb-4 font-semibold" style={{ textShadow: '0 0 3px rgba(0, 255, 255, 0.4)'}}>Test Your Code <span className="text-xs text-gray-500">(Optional)</span></h3>
                   <TestRunner language={LANGUAGES.find((l) => l.id === language)?.monacoLang || language} code={code} />
                 </div>
