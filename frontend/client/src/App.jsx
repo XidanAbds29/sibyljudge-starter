@@ -59,7 +59,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/problems" element={<ProblemList />} />
-          <Route path="/problem/:id" element={<ProblemPage />} />
+          <Route path="/problem/:external_id" element={<ProblemPage />} />
           {/* Add other routes as needed */}
         </Routes>
       </div>
