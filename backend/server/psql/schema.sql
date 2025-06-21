@@ -27,6 +27,10 @@ CREATE TABLE Problem (
   difficulty   VARCHAR(20),
   time_limit   INT          NOT NULL,
   mem_limit    INT          NOT NULL,
+  statement_html TEXT,
+  input_spec   TEXT,
+  output_spec  TEXT,
+  samples      JSONB,
   fetched_at   TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -52,7 +56,8 @@ CREATE TABLE Submission (
   status         VARCHAR(50),
   exec_time      FLOAT,
   submitted_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  verdict_detail TEXT
+  verdict_detail TEXT,
+  solution_code  TEXT
 );
 
 -- Contests

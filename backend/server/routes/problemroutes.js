@@ -1,13 +1,13 @@
 const express = require("express");
-const pool    = require("../db");
-const router  = express.Router();
+const pool = require("../db");
+const router = express.Router();
 
 // GET /api/problems?judgeId=&limit=&page= — with pagination + total count
 router.get("/", async (req, res) => {
   const judgeId = req.query.judgeId ? parseInt(req.query.judgeId) : null;
-  const limit   = req.query.limit   ? parseInt(req.query.limit)   : 10;
-  const page    = req.query.page    ? parseInt(req.query.page)    : 1;
-  const offset  = (page - 1) * limit;
+  const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+  const page = req.query.page ? parseInt(req.query.page) : 1;
+  const offset = (page - 1) * limit;
 
   try {
     // 1) total count
@@ -27,7 +27,12 @@ router.get("/", async (req, res) => {
       "p.difficulty",
       "p.time_limit",
       "p.mem_limit",
-      `o.name AS source_name`
+      "p.statement_html",
+      "p.input_spec",
+      "p.output_spec",
+      "p.samples",
+      "o.name AS source_name",
+      `(SELECT JSONB_AGG(t.name) FROM problem_tag pt JOIN tag t ON t.tag_id = pt.tag_id WHERE pt.problem_id = p.problem_id) as tags`,
     ].join(",");
 
     const where = judgeId ? "WHERE p.source_oj_id = $1" : "";
@@ -60,7 +65,16 @@ router.get("/:external_id", async (req, res) => {
   const { external_id } = req.params;
   try {
     const result = await pool.query(
-      `SELECT * FROM problem WHERE external_id = $1`,
+      `SELECT p.*, oj.name as source_name,
+       JSONB_BUILD_OBJECT(
+         'statement', p.statement_html,
+         'input', p.input_spec,
+         'output', p.output_spec,
+         'samples', p.samples
+       ) as sections
+       FROM problem p
+       JOIN online_judge oj ON oj.judge_id = p.source_oj_id
+       WHERE p.external_id = $1`,
       [external_id]
     );
     if (!result.rows.length) {
