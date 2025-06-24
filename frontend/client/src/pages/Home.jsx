@@ -127,11 +127,18 @@ export default function HomePage() {
               <p className="text-xl text-gray-300 mb-8">
                 Continue honing your skills and conquer new challenges.
               </p>
-              <Link to="/problems">
-                <button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(236,72,153,0.7)] focus:outline-none focus:ring-4 focus:ring-pink-500/50">
-                  Explore More Problems
-                </button>
-              </Link>
+              <div className="flex justify-center space-x-6">
+                <Link to="/problems">
+                  <button className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(236,72,153,0.7)] focus:outline-none focus:ring-4 focus:ring-pink-500/50">
+                    Explore More Problems
+                  </button>
+                </Link>
+                <Link to="/about">
+                  <button className="bg-gradient-to-r from-cyan-400 to-teal-500 hover:from-cyan-500 hover:to-teal-600 text-gray-900 font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(22,255,255,0.8)] focus:outline-none focus:ring-4 focus:ring-cyan-400/50">
+                    About Us
+                  </button>
+                </Link>
+              </div>
             </>
           )}
         </div>

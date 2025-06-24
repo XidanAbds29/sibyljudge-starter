@@ -2,6 +2,7 @@
 import React from "react";
 import { Link, Routes, Route, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
+import About from './pages/About';
 import ProblemList from "./components/ProblemList";
 import ProblemPage from "./components/ProblemPage";
 import AuthPage from "./pages/AuthPage"; 
@@ -84,10 +85,11 @@ function AppLayoutAndRoutes() {
           <Route path="/problem/:external_id" element={<ProblemPage />} />
           <Route path="/login" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
+          <Route path="/about" element={<About />} />
           {/* Placeholder for other pages - you'll need to create these components */}
           <Route path="/contests" element={<div className="text-center py-10 text-2xl text-cyan-400">Contests Page - Coming Soon!</div>} />
           <Route path="/community" element={<div className="text-center py-10 text-2xl text-cyan-400">Community Page - Coming Soon!</div>} />
-          <Route path="/about" element={<div className="text-center py-10 text-2xl text-cyan-400">About Page - Coming Soon!</div>} />
+          {/* <Route path="/about" element={<div className="text-center py-10 text-2xl text-cyan-400">About Page - Coming Soon!</div>} /> */}
           <Route path="*" element={<div className="min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center py-10"><h1 class="text-6xl font-bold text-red-500">404</h1><p class="text-2xl text-red-400 mt-4">Page Not Found</p><p class="text-gray-300 mt-2">The page you are looking for does not exist or has been moved.</p><Link to="/" class="mt-8 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition">Go Home</Link></div>} /> {/* Catch-all for unknown routes */}
         </Routes>
       </main>
