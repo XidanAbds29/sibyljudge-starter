@@ -6,6 +6,8 @@ import About from './pages/About';
 import ProblemList from "./components/ProblemList";
 import ProblemPage from "./components/ProblemPage";
 import AuthPage from "./pages/AuthPage"; 
+import FAQ from './pages/FAQ';
+import ScrollToTop from "./components/ScrollToTop";
 // Corrected import path assuming AuthContext.jsx is in src/components/
 import { AuthProvider, useAuth } from "./components/AuthContext"; 
 
@@ -42,6 +44,8 @@ function Navbar() {
           <Link to="/" className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300">Home</Link>
           <Link to="/problems" className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300">Problems</Link>
           <Link to="/contests" className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300">Contests</Link>
+          <Link to="/groups" className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300">Groups</Link>
+          <Link to="/faq" className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300">FAQ</Link>
           
           {user ? (
             <>
@@ -76,6 +80,8 @@ function Navbar() {
 function AppLayoutAndRoutes() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100 font-['Orbitron',_sans-serif] antialiased"> {/* Using Orbitron font */}
+      <ScrollToTop /> {/* ScrollToTop component to handle scroll restoration */}
+      {/* Navbar is placed at the top of the layout */}
       <Navbar />
       {/* Increased padding-top to ensure content is below the navbar */}
       <main className="pt-20 sm:pt-24 container mx-auto px-2 sm:px-4 md:px-6 lg:px-8"> 
@@ -86,10 +92,11 @@ function AppLayoutAndRoutes() {
           <Route path="/login" element={<AuthPage />} />
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/about" element={<About />} />
+          <Route path="/faq" element={<FAQ />} />
           {/* Placeholder for other pages - you'll need to create these components */}
-          <Route path="/contests" element={<div className="text-center py-10 text-2xl text-cyan-400">Contests Page - Coming Soon!</div>} />
-          <Route path="/community" element={<div className="text-center py-10 text-2xl text-cyan-400">Community Page - Coming Soon!</div>} />
-          {/* <Route path="/about" element={<div className="text-center py-10 text-2xl text-cyan-400">About Page - Coming Soon!</div>} /> */}
+          <Route path="/contests" element={<div className="text-center py-10 text-2xl text-cyan-400">Contests - Coming Soon!</div>} />
+          <Route path="/groups" element={<div className="text-center py-10 text-2xl text-cyan-400">Groups - Coming Soon!</div>} />
+          <Route path="/about" element={<div className="text-center py-10 text-2xl text-cyan-400">About - Coming Soon!</div>} />
           <Route path="*" element={<div className="min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center py-10"><h1 class="text-6xl font-bold text-red-500">404</h1><p class="text-2xl text-red-400 mt-4">Page Not Found</p><p class="text-gray-300 mt-2">The page you are looking for does not exist or has been moved.</p><Link to="/" class="mt-8 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition">Go Home</Link></div>} /> {/* Catch-all for unknown routes */}
         </Routes>
       </main>
