@@ -100,7 +100,7 @@ def main():
         print(f"Error fetching problem list: {e}")
         return
     problems = resp.json().get('result', {}).get('problems', [])
-    selected = [p for p in problems if 'rating' in p][:10]
+    selected = [p for p in problems if 'rating' in p][:50]
 
     loop = asyncio.get_event_loop()
     for p in selected:

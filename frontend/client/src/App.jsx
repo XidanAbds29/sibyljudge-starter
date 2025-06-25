@@ -8,6 +8,9 @@ import ProblemPage from "./components/ProblemPage";
 import AuthPage from "./pages/AuthPage"; 
 import FAQ from './pages/FAQ';
 import ScrollToTop from "./components/ScrollToTop";
+import ContestListPage from "./components/ContestListPage";
+import ContestCreatePage from "./components/ContestCreatePage";
+import ContestPage from "./components/ContestPage";
 // Corrected import path assuming AuthContext.jsx is in src/components/
 import { AuthProvider, useAuth } from "./components/AuthContext"; 
 
@@ -93,11 +96,18 @@ function AppLayoutAndRoutes() {
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
-          {/* Placeholder for other pages - you'll need to create these components */}
-          <Route path="/contests" element={<div className="text-center py-10 text-2xl text-cyan-400">Contests - Coming Soon!</div>} />
+          <Route path="/contests" element={<ContestListPage />} />
+          <Route path="/contests/create" element={<ContestCreatePage />} />
+          <Route path="/contests/:contestId" element={<ContestPage />} />
           <Route path="/groups" element={<div className="text-center py-10 text-2xl text-cyan-400">Groups - Coming Soon!</div>} />
-          <Route path="/about" element={<div className="text-center py-10 text-2xl text-cyan-400">About - Coming Soon!</div>} />
-          <Route path="*" element={<div className="min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center py-10"><h1 class="text-6xl font-bold text-red-500">404</h1><p class="text-2xl text-red-400 mt-4">Page Not Found</p><p class="text-gray-300 mt-2">The page you are looking for does not exist or has been moved.</p><Link to="/" class="mt-8 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition">Go Home</Link></div>} /> {/* Catch-all for unknown routes */}
+          <Route path="*" element={
+            <div className="min-h-[calc(100vh-10rem)] flex flex-col items-center justify-center text-center py-10">
+              <h1 className="text-6xl font-bold text-red-500">404</h1>
+              <p className="text-2xl text-red-400 mt-4">Page Not Found</p>
+              <p className="text-gray-300 mt-2">The page you are looking for does not exist or has been moved.</p>
+              <Link to="/" className="mt-8 px-6 py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-500 transition">Go Home</Link>
+            </div>
+          } />
         </Routes>
       </main>
       <footer className="bg-gray-950 text-center p-6 mt-12 border-t border-cyan-700/30">
