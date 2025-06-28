@@ -1,90 +1,70 @@
 const express = require("express");
-const pool = require("../db");
 const router = express.Router();
 
-// GET /api/problems?judgeId=&limit=&page= — with pagination + total count
+// GET /api/problems?judgeId=&limit=&page=&tags[]=&difficulty=
 router.get("/", async (req, res) => {
+  const supabase = req.supabase;
   const judgeId = req.query.judgeId ? parseInt(req.query.judgeId) : null;
   const limit = req.query.limit ? parseInt(req.query.limit) : 10;
   const page = req.query.page ? parseInt(req.query.page) : 1;
-  const offset = (page - 1) * limit;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  // Accept tags as array: tags[]=dfs&tags[]=greedy
+  let tags = req.query.tags || [];
+  if (typeof tags === "string") tags = [tags];
+  const difficulty = req.query.difficulty;
 
-  try {
-    // 1) total count
-    const countSQL = judgeId
-      ? `SELECT COUNT(*) AS total FROM problem WHERE source_oj_id = $1`
-      : `SELECT COUNT(*) AS total FROM problem`;
-    const countParams = judgeId ? [judgeId] : [];
-    const countRes = await pool.query(countSQL, countParams);
-    const total = parseInt(countRes.rows[0].total, 10);
+  let query = supabase
+    .from("Problem")
+    .select("*, Problem_tag:Problem_tag!inner(Tag:Tag!inner(name))", {
+      count: "exact",
+    })
+    .order("problem_id", { ascending: false })
+    .range(from, to);
 
-    // 2) fetch page of problems + source_name
-    const fields = [
-      "p.problem_id",
-      "p.external_id",
-      "p.title",
-      "p.url",
-      "p.difficulty",
-      "p.time_limit",
-      "p.mem_limit",
-      "p.statement_html",
-      "p.input_spec",
-      "p.output_spec",
-      "p.samples",
-      "o.name AS source_name",
-      `(SELECT JSONB_AGG(t.name) FROM problem_tag pt JOIN tag t ON t.tag_id = pt.tag_id WHERE pt.problem_id = p.problem_id) as tags`,
-    ].join(",");
-
-    const where = judgeId ? "WHERE p.source_oj_id = $1" : "";
-    // param order: [judgeId?, limit, offset]
-    const params = judgeId ? [judgeId, limit, offset] : [limit, offset];
-
-    const sql = `
-      SELECT ${fields}
-        FROM problem p
-        JOIN online_judge o ON o.judge_id = p.source_oj_id
-        ${where}
-    ORDER BY p.fetched_at DESC
-       LIMIT $${judgeId ? 2 : 1}
-      OFFSET $${judgeId ? 3 : 2}
-    `;
-
-    const dataRes = await pool.query(sql, params);
-    res.json({
-      problems: dataRes.rows,
-      total,
-    });
-  } catch (err) {
-    console.error("Error fetching problems:", err);
-    res.status(500).json({ error: "Internal server error" });
+  if (judgeId) query = query.eq("source_oj_id", judgeId);
+  if (difficulty) query = query.eq("difficulty", difficulty);
+  // For tags, fetch problems that have ANY of the tags, then filter for ALL in JS
+  if (tags.length > 0) {
+    query = query.in("Problem_tag.Tag.name", tags);
   }
+
+  const { data, count, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+
+  let filtered = data;
+  if (tags.length > 0) {
+    filtered = data.filter((p) => {
+      const problemTags = (p.Problem_tag || [])
+        .map((pt) => pt.Tag?.name)
+        .filter(Boolean);
+      return tags.every((tag) => problemTags.includes(tag));
+    });
+  }
+
+  // Return the total count from Supabase (before pagination/filtering)
+  res.json({ problems: filtered, total: count });
+});
+
+// GET /api/problems/tags — all tags
+router.get("/tags", async (req, res) => {
+  const supabase = req.supabase;
+  const { data, error } = await supabase.from("Tag").select("name");
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data.map((t) => t.name));
 });
 
 // GET /api/problems/:external_id — Single problem
 router.get("/:external_id", async (req, res) => {
+  const supabase = req.supabase;
   const { external_id } = req.params;
-  try {
-    const result = await pool.query(
-      `SELECT p.*, oj.name as source_name,
-       JSONB_BUILD_OBJECT(
-         'statement', p.statement_html,
-         'input', p.input_spec,
-         'output', p.output_spec,
-         'samples', p.samples
-       ) as sections
-       FROM problem p
-       JOIN online_judge oj ON oj.judge_id = p.source_oj_id
-       WHERE p.external_id = $1`,
-      [external_id]
-    );
-    if (!result.rows.length) {
-      return res.status(404).json({ error: "Problem not found" });
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Error fetching problem:", err);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  const { data, error } = await supabase
+    .from("Problem")
+    .select("*")
+    .eq("external_id", external_id)
+    .single();
+  if (error) return res.status(404).json({ error: error.message });
+  res.json(data);
 });
 
 module.exports = router;

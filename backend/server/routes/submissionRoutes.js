@@ -1,6 +1,5 @@
 // backend/server/routes/submissionRoutes.js
 const express = require("express");
-const pool = require("../db");
 const router = express.Router();
 const { runCode } = require("../runners/testRunner");
 
@@ -49,73 +48,56 @@ async function submitToJudge(problem, code, language) {
 }
 
 router.post("/", async (req, res) => {
+  const supabase = req.supabase;
   const { problem_id, language, code } = req.body;
   // TODO: Get actual user_id from session/auth
   const user_id = 1; // Mock user for now
 
   try {
     // 1. Get problem details to know which judge to submit to
-    const problem = await pool.query(
-      `SELECT p.*, o.name as judge_name 
-       FROM problem p
-       JOIN online_judge o ON o.judge_id = p.source_oj_id
-       WHERE p.problem_id = $1`,
-      [problem_id]
-    );
+    const { data: problem, error: problemError } = await supabase
+      .from("Problem")
+      .select("*")
+      .eq("problem_id", problem_id)
+      .single();
+    if (problemError || !problem) throw new Error("Problem not found");
 
-    if (!problem.rows.length) {
-      return res.status(404).json({ error: "Problem not found" });
+    // 2. Only handle Codeforces for now
+    if (problem.source_oj_id !== 1) {
+      return res
+        .status(400)
+        .json({ error: "Only Codeforces submission supported for now." });
     }
 
-    // 2. Submit to judge and get verdict
-    const verdict = await submitToJudge(problem.rows[0], code, language);
-
-    // 3. Save submission to database
-    const result = await pool.query(
-      `INSERT INTO submission
-         (user_id, problem_id, language, status, exec_time, verdict_detail)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [
-        user_id,
-        problem_id,
-        language,
-        verdict.status,
-        verdict.exec_time,
-        verdict.verdict_detail,
-      ]
+    // 3. Submit to Codeforces
+    const verdict = await submitToCodeforces(
+      problem.external_id,
+      code,
+      language
     );
 
-    // 4. Update user's personal record
-    await pool.query(
-      `INSERT INTO personal_record
-         (user_id, problem_id, status, attempts_count, 
-          first_attempted, last_attempted, solved_at)
-       VALUES ($1, $2, $3, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP,
-               CASE WHEN $3 = 'solved' THEN CURRENT_TIMESTAMP END)
-       ON CONFLICT (user_id, problem_id) DO UPDATE
-       SET attempts_count = personal_record.attempts_count + 1,
-           last_attempted = CURRENT_TIMESTAMP,
-           status = CASE 
-             WHEN $3 = 'solved' THEN 'solved'
-             ELSE personal_record.status
-           END,
-           solved_at = CASE
-             WHEN $3 = 'solved' AND personal_record.solved_at IS NULL 
-             THEN CURRENT_TIMESTAMP
-             ELSE personal_record.solved_at
-           END`,
-      [
-        user_id,
-        problem_id,
-        verdict.status === "Accepted" ? "solved" : "attempted",
-      ]
-    );
+    // 4. Store submission in DB
+    const { data: submission, error: submError } = await supabase
+      .from("Submission")
+      .insert([
+        {
+          user_id,
+          problem_id,
+          language,
+          status: verdict.status,
+          exec_time: verdict.exec_time,
+          verdict_detail: verdict.verdict_detail,
+          solution_code: code,
+        },
+      ])
+      .select()
+      .single();
+    if (submError) throw new Error(submError.message);
 
-    res.json(result.rows[0]);
+    res.json({ verdict: verdict.status, submission });
   } catch (err) {
     console.error("Submission error:", err);
-    res.status(500).json({ error: "Submission failed" });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
@@ -137,44 +119,30 @@ router.post("/test", async (req, res) => {
 
 // Get submissions for a problem
 router.get("/problem/:problem_id", async (req, res) => {
+  const supabase = req.supabase;
   const { problem_id } = req.params;
-  // TODO: Add pagination
-  try {
-    const result = await pool.query(
-      `SELECT s.*, u.username
-       FROM submission s
-       JOIN "User" u ON u.user_id = s.user_id
-       WHERE s.problem_id = $1
-       ORDER BY s.submitted_at DESC
-       LIMIT 50`,
-      [problem_id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching submissions:", err);
-    res.status(500).json({ error: "Failed to fetch submissions" });
-  }
+  const { data, error } = await supabase
+    .from("Submission")
+    .select("*")
+    .eq("problem_id", problem_id)
+    .order("submitted_at", { ascending: false })
+    .limit(50);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 // Get submissions for a user
 router.get("/user/:user_id", async (req, res) => {
+  const supabase = req.supabase;
   const { user_id } = req.params;
-  // TODO: Add pagination
-  try {
-    const result = await pool.query(
-      `SELECT s.*, p.title as problem_title, p.url as problem_url
-       FROM submission s
-       JOIN problem p ON p.problem_id = s.problem_id
-       WHERE s.user_id = $1
-       ORDER BY s.submitted_at DESC
-       LIMIT 50`,
-      [user_id]
-    );
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Error fetching submissions:", err);
-    res.status(500).json({ error: "Failed to fetch submissions" });
-  }
+  const { data, error } = await supabase
+    .from("Submission")
+    .select("*")
+    .eq("user_id", user_id)
+    .order("submitted_at", { ascending: false })
+    .limit(50);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 module.exports = router;

@@ -1,11 +1,14 @@
-
 const express = require("express");
-const pool = require("../db");
 const router = express.Router();
 
+// GET /api/judges
 router.get("/", async (req, res) => {
-  const { rows } = await pool.query("SELECT judge_id, name FROM online_judge");
-  res.json(rows);
+  const supabase = req.supabase;
+  const { data, error } = await supabase
+    .from("online_judge")
+    .select("judge_id, name");
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 module.exports = router;
