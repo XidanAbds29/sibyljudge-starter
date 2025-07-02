@@ -2,7 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "./AuthContext";
 import { useParams, useNavigate } from "react-router-dom";
-import { ErrorBoundary } from "./ErrorBoundary";
+import ErrorBoundary from "./ErrorBoundary";
+import SampleTest from "./SampleTest";
+import StatusAnimation from "./StatusAnimation";
+import TestRunner from "./TestRunner";
+import ParsedHtmlContent from "./ParsedHtmlContent";
+import ParsedMarkdownContent from "./ParsedHtmlContent";
+import SubmissionHistory from "./SubmissionHistory";
 
 const TABS = [
   "Statement",
@@ -40,286 +46,6 @@ const LANGUAGES = [
 const DEFAULT_TIME_LIMIT_MS = 2000;
 const DEFAULT_MEMORY_LIMIT_KB = 262144;
 
-function SampleTest({ input, output }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl bg-gray-900/80 border-2 border-cyan-700/40 shadow-lg p-5 flex flex-col gap-3 hover:border-cyan-400/80 transition-all duration-300 relative group"
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-          Sample Input
-        </span>
-      </div>
-      <pre className="bg-gray-800/80 border border-cyan-700/30 rounded-md p-2 text-xs text-cyan-100 whitespace-pre-wrap overflow-x-auto">
-        {input || <span className="italic text-gray-500">(none)</span>}
-      </pre>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-xs font-bold uppercase tracking-wider text-pink-300">
-          Sample Output
-        </span>
-      </div>
-      <pre className="bg-gray-800/80 border border-pink-700/30 rounded-md p-2 text-xs text-pink-100 whitespace-pre-wrap overflow-x-auto">
-        {output || <span className="italic text-gray-500">(none)</span>}
-      </pre>
-    </motion.div>
-  );
-}
-
-const StatusAnimation = ({ status, message }) => {
-  const baseColors = {
-    Accepted: "#22c55e",
-    "Wrong Answer": "#ef4444",
-    "Time Limit Exceeded": "#f97316",
-    "Runtime Error": "#ec4899",
-    "Compilation Error": "#f97316",
-    Queued: "#eab308",
-    "Submitting...": "#3b82f6",
-    Error: "#ef4444",
-  };
-  const color = baseColors[status] || "#06b6d4";
-  return (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0, y: -20 }}
-      animate={{ scale: 1, opacity: 1, y: 0 }}
-      exit={{ scale: 0.8, opacity: 0, y: -20 }}
-      className="fixed top-6 right-6 p-4 rounded-lg z-[100] backdrop-blur-md shadow-2xl"
-      style={{
-        backgroundColor: "rgba(17, 24, 39, 0.9)",
-        border: `2px solid ${color}`,
-        boxShadow: `0 0 25px -5px ${color}, 0 0 15px ${color} inset`,
-      }}
-    >
-      <div className="flex items-center gap-3">
-        {status === "Accepted" ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke={color}
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke={color}
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        )}
-        <div className="text-lg font-semibold" style={{ color }}>
-          {status}
-        </div>
-      </div>
-      {message && (
-        <p
-          className="text-sm text-gray-300 mt-1 max-w-xs truncate"
-          title={message}
-        >
-          {message}
-        </p>
-      )}
-      <motion.div
-        className="absolute inset-0 rounded-lg pointer-events-none"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.3, 0] }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        style={{ border: `1px solid ${color}`, boxShadow: `0 0 10px ${color}` }}
-      />
-    </motion.div>
-  );
-};
-
-const TestRunner = ({ language, code }) => {
-  const [input, setInput] = useState("");
-  const [output, setOutput] = useState("");
-  const [isRunning, setIsRunning] = useState(false);
-  const runTest = async () => {
-    setIsRunning(true);
-    setOutput(
-      "Initializing test runner...\nThis feature currently requires a custom backend API for code execution (/api/submissions/test)."
-    );
-    try {
-      const res = await fetch("/api/submissions/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language, code, input }),
-      });
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(
-          `API Error: ${res.status} - ${errText || "Failed to run test"}`
-        );
-      }
-      const result = await res.json();
-      setOutput(result.output || "No output received from test run.");
-    } catch (err) {
-      setOutput("Error running test: " + err.message);
-    } finally {
-      setIsRunning(false);
-    }
-  };
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="space-y-4"
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-sky-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" />
-          <div className="relative">
-            <h3 className="text-cyan-400 mb-2 flex items-center gap-2 font-semibold">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-              Input
-            </h3>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={isRunning}
-              className="w-full h-40 p-3 bg-gray-800/70 border border-cyan-700/60 rounded-lg font-mono resize-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 text-gray-300 placeholder-gray-500"
-              placeholder="Enter test input here..."
-            />
-          </div>
-        </div>
-        <div className="relative group">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-sky-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" />
-          <div className="relative">
-            <h3 className="text-cyan-400 mb-2 flex items-center gap-2 font-semibold">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-              Output
-            </h3>
-            <pre
-              className={`w-full h-40 p-3 bg-gray-800/70 border border-cyan-700/60 rounded-lg font-mono overflow-auto whitespace-pre-wrap ${
-                isRunning ? "animate-pulse opacity-60" : ""
-              } transition-all duration-300 text-gray-300`}
-            >
-              {output || "Output will appear here..."}
-            </pre>
-          </div>
-        </div>
-      </div>
-      <motion.button
-        onClick={runTest}
-        disabled={isRunning}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className={`w-full px-4 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 ${
-          isRunning
-            ? "bg-cyan-700/50 cursor-not-allowed"
-            : "bg-cyan-600 hover:bg-cyan-500 hover:shadow-[0_0_15px_rgba(56,189,248,0.6)]"
-        } text-white transition-all duration-300`}
-      >
-        {isRunning ? (
-          <>
-            <svg
-              className="animate-spin h-5 w-5"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            Running Test...
-          </>
-        ) : (
-          <>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Run Test
-          </>
-        )}
-      </motion.button>
-    </motion.div>
-  );
-};
-
-// --- Helper: ParsedHtmlContent ---
-// TODO: Replace with your actual HTML parsing/rendering component if available
-function ParsedHtmlContent({ htmlContent }) {
-  return (
-    <div
-      className="prose prose-invert max-w-none text-cyan-100"
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-    />
-  );
-}
-
-// --- Helper: SubmissionHistory ---
-// TODO: Replace with your actual submission history component if available
-function SubmissionHistory({ problemId, supabase, currentUser }) {
-  return (
-    <div className="text-center text-gray-400 py-8">
-      Submission history feature is not implemented.
-    </div>
-  );
-}
-
-// --- Main ProblemPage Component ---
 export default function ProblemPage() {
   // Get problem ID from URL parameters
   const { external_id } = useParams();
@@ -779,6 +505,27 @@ export default function ProblemPage() {
     }
   }
 
+  // --- Helper: HTML to Markdown conversion ---
+  function htmlOrTextToMarkdown(htmlOrText) {
+    if (!htmlOrText) return "";
+    // Simple heuristic: if it looks like HTML, strip tags and convert to markdown-like text
+    // For production, use a library like turndown for robust conversion
+    if (/<[a-z][\s\S]*>/i.test(htmlOrText)) {
+      // Replace <br> and <br/> with newlines
+      let md = htmlOrText.replace(/<br\s*\/?>(\n)?/gi, "\n");
+      // Replace <b>, <strong> with **text**
+      md = md.replace(/<(b|strong)>(.*?)<\/\1>/gi, "**$2**");
+      // Replace <i>, <em> with *text*
+      md = md.replace(/<(i|em)>(.*?)<\/\1>/gi, "*$2*");
+      // Replace <pre>(...)</pre> with code block
+      md = md.replace(/<pre>([\s\S]*?)<\/pre>/gi, (m, code) => `\n\n\`\`\`\n${code.trim()}\n\`\`\`\n`);
+      // Remove all other tags
+      md = md.replace(/<[^>]+>/g, "");
+      return md.trim();
+    }
+    return htmlOrText;
+  }
+
   // Function to render content based on the active tab
   const renderTabContent = () => {
     if (!problem)
@@ -789,11 +536,11 @@ export default function ProblemPage() {
       );
     switch (activeTab) {
       case "Statement":
-        return <ParsedHtmlContent htmlContent={stmtHTML} />;
+        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(stmtHTML)} />;
       case "Input":
-        return <ParsedHtmlContent htmlContent={inputHTML} />;
+        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(inputHTML)} />;
       case "Output":
-        return <ParsedHtmlContent htmlContent={outputHTML} />;
+        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(outputHTML)} />;
       case "Examples":
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
