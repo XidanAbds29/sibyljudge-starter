@@ -30,7 +30,16 @@ router.get("/", async (req, res) => {
   }
 
   const { data, count, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error("[DEBUG] /api/problems error:", error, error.code, error.details, error.hint);
+    return res.status(error.status || 500).json({
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      status: error.status
+    });
+  }
 
   let filtered = data;
   if (tags.length > 0) {
