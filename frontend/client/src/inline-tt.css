@@ -1,0 +1,12 @@
+.inline-tt {
+  font-family: 'Fira Mono', 'Consolas', 'Menlo', 'Monaco', monospace;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  font-size: 1em;
+  font-weight: 500;
+  vertical-align: baseline;
+  letter-spacing: 0.01em;
+  /* No box-shadow, no border */
+  color: #e0e0e0;
+}
