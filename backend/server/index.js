@@ -35,6 +35,7 @@ const problemRoutes = require("./routes/problemroutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
+const discussionRoutes = require("./routes/discussionRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use(
@@ -78,6 +79,7 @@ app.use(
   },
   contestRoutes
 );
+app.use("/api/discussions", discussionRoutes);
 console.log("✅ All routes mounted");
 
 // ─── Start Server ────────────────────────────────

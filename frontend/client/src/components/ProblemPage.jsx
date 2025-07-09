@@ -9,6 +9,7 @@ import TestRunner from "./TestRunner";
 import ParsedHtmlContent from "./ParsedHtmlContent";
 import ParsedMarkdownContent from "./ParsedHtmlContent";
 import SubmissionHistory from "./SubmissionHistory";
+import DiscussionThreadList from "./DiscussionThreadList";
 
 const TABS = [
   "Statement",
@@ -518,7 +519,10 @@ export default function ProblemPage() {
       // Replace <i>, <em> with *text*
       md = md.replace(/<(i|em)>(.*?)<\/\1>/gi, "*$2*");
       // Replace <pre>(...)</pre> with code block
-      md = md.replace(/<pre>([\s\S]*?)<\/pre>/gi, (m, code) => `\n\n\`\`\`\n${code.trim()}\n\`\`\`\n`);
+      md = md.replace(
+        /<pre>([\s\S]*?)<\/pre>/gi,
+        (m, code) => `\n\n\`\`\`\n${code.trim()}\n\`\`\`\n`
+      );
       // Remove all other tags
       md = md.replace(/<[^>]+>/g, "");
       return md.trim();
@@ -536,11 +540,17 @@ export default function ProblemPage() {
       );
     switch (activeTab) {
       case "Statement":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(stmtHTML)} />;
+        return (
+          <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(stmtHTML)} />
+        );
       case "Input":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(inputHTML)} />;
+        return (
+          <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(inputHTML)} />
+        );
       case "Output":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(outputHTML)} />;
+        return (
+          <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(outputHTML)} />
+        );
       case "Examples":
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -983,6 +993,13 @@ export default function ProblemPage() {
                 />
               )}
             </AnimatePresence>
+
+            {/* Discussion Threads Section */}
+            {problem && problem.id && (
+              <div className="mt-12">
+                <DiscussionThreadList problemId={problem.id} />
+              </div>
+            )}
           </div>
         </div>
       </AuthProvider>

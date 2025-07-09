@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { createClient } = require("@supabase/supabase-js");
+const jwt = require("jsonwebtoken");
 
-// Always use a single global supabase client
 const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = (
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -10,6 +10,15 @@ const supabaseServiceKey = (
   process.env.PUBLIC_SUPABASE_ANON_KEY
 ).trim();
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+const JWT_SECRET = process.env.JWT_SECRET || "sibyl_judge_secret";
+const COOKIE_NAME = "sibyl_judge_token";
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 
 // Signup
 router.post("/signup", async (req, res) => {
@@ -22,7 +31,15 @@ router.post("/signup", async (req, res) => {
     options: { data: { username } },
   });
   if (error) return res.status(500).json({ error: error.message });
-  // Return both user and session, so frontend can handle confirmation-required case
+  // Issue JWT if user is confirmed
+  if (data.user && data.session) {
+    const token = jwt.sign(
+      { id: data.user.id, email: data.user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+  }
   res.json({ user: data.user, session: data.session });
 });
 
@@ -36,20 +53,34 @@ router.post("/login", async (req, res) => {
     password,
   });
   if (error) return res.status(401).json({ error: error.message });
+  // Issue JWT
+  if (data.user) {
+    const token = jwt.sign(
+      { id: data.user.id, email: data.user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+  }
   res.json({ user: data.user });
 });
 
 // Logout (client should just clear local session)
 router.post("/logout", (req, res) => {
+  res.clearCookie(COOKIE_NAME, COOKIE_OPTIONS);
   res.json({ message: "Logged out" });
 });
 
-// Session check (client should store session token)
+// Session check
 router.get("/session", async (req, res) => {
-  res.status(501).json({
-    error:
-      "Session check not implemented. Use Supabase client on frontend for session management.",
-  });
+  const token = req.cookies[COOKIE_NAME];
+  if (!token) return res.status(401).json({ error: "Not authenticated" });
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    res.json({ user: { id: payload.id, email: payload.email } });
+  } catch {
+    res.status(401).json({ error: "Invalid or expired session" });
+  }
 });
 
 module.exports = router;

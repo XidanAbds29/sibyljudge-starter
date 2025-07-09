@@ -12,6 +12,8 @@ import ContestListPage from "./components/ContestListPage";
 import ContestCreatePage from "./components/ContestCreatePage";
 import ContestPage from "./components/ContestPage";
 import ContestProblemPage from "./pages/ContestProblemPage";
+import DiscussionPage from "./pages/DiscussionPage"; // Importing DiscussionPage
+import DiscussionThreadPage from "./pages/DiscussionThreadPage"; // Importing DiscussionThreadPage
 // Corrected import path assuming AuthContext.jsx is in src/components/
 import { AuthProvider, useAuth } from "./components/AuthContext";
 
@@ -149,6 +151,12 @@ function Navbar() {
           >
             FAQ
           </Link>
+          <Link
+            to="/discussion"
+            className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-300 hover:text-cyan-400 rounded-md transition duration-300"
+          >
+            Discussion
+          </Link>
 
           {user ? (
             <UserDropdown user={user} profile={profile} signOut={signOut} />
@@ -197,6 +205,9 @@ function AppLayoutAndRoutes() {
           <Route path="/contests/create" element={<ContestCreatePage />} />
           <Route path="/contests/:contestId" element={<ContestPage />} />
           <Route path="/contests/:contestId/problem/:problemId" element={<ContestProblemPage />} />
+          <Route path="/discussion" element={<DiscussionPage />} />
+          <Route path="/discussions" element={<DiscussionPage />} />
+          <Route path="/discussions/:threadId" element={<DiscussionThreadPage />} />
           <Route
             path="/groups"
             element={
