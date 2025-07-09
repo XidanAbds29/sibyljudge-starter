@@ -392,7 +392,7 @@ export default function ProblemList() {
           <div className="divide-y divide-gray-700/70">
             {problems.map((p) => (
               <div
-                key={p.external_id || p.problem_id}
+                key={p.problem_id}
                 className="py-5 group problem-card-animate relative transition-all duration-300 hover:scale-[1.025] hover:z-10"
               >
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-80 transition-all duration-300 z-0">
@@ -404,7 +404,7 @@ export default function ProblemList() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between relative z-10">
                   <div className="flex-1 min-w-0 mb-3 sm:mb-0">
                     <Link
-                      to={`/problem/${p.external_id}`}
+                      to={`/problem/${p.problem_id}`}
                       className="text-xl font-semibold text-cyan-400 hover:text-sky-300 transition-colors duration-300 block group-hover:tracking-wide"
                       title={p.title}
                     >
@@ -440,7 +440,7 @@ export default function ProblemList() {
                     )}
                   </div>
                   <Link
-                    to={`/problem/${p.external_id}`}
+                    to={`/problem/${p.problem_id}`}
                     className="ml-0 sm:ml-4 flex-shrink-0 px-4 py-2 bg-cyan-600 text-gray-950 font-semibold rounded-lg hover:bg-cyan-500 transition-all duration-300 shadow hover:shadow-md hover:shadow-cyan-500/30 text-sm"
                   >
                     View Details →

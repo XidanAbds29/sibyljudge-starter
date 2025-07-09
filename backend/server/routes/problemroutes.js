@@ -63,14 +63,14 @@ router.get("/tags", async (req, res) => {
   res.json(data.map((t) => t.name));
 });
 
-// GET /api/problems/:external_id — Single problem
-router.get("/:external_id", async (req, res) => {
+// GET /api/problems/:problem_id — Single problem by problem_id
+router.get("/:problem_id", async (req, res) => {
   const supabase = req.supabase;
-  const { external_id } = req.params;
+  const { problem_id } = req.params;
   const { data, error } = await supabase
     .from("Problem")
     .select("*")
-    .eq("external_id", external_id)
+    .eq("problem_id", problem_id)
     .single();
   if (error) return res.status(404).json({ error: error.message });
   res.json(data);

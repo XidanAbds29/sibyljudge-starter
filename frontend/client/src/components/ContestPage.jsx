@@ -329,7 +329,7 @@ const ContestPage = () => {
                         className="bg-gray-800/70 rounded-lg px-5 py-3 text-cyan-200 border border-cyan-700/40"
                       >
                         <a
-                          href={`/contests/${contestId}/problem/${p.external_id}`}
+                          href={`/contests/${contestId}/problem/${p.problem_id}`}
                           className="font-semibold text-cyan-300 hover:underline hover:text-pink-400 transition"
                         >
                           {p.title || p.alias || p.problem_id}

@@ -59,6 +59,7 @@ const problemRoutes = require("./routes/problemroutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
+const groupRoutes = require("./routes/groupRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use(
@@ -101,6 +102,10 @@ app.use(
     next();
   },
   contestRoutes
+);
+app.use(
+  "/api/groups",
+  groupRoutes
 );
 console.log("✅ All routes mounted");
 

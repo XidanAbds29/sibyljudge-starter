@@ -1,6 +1,62 @@
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
+
+// Get a specific problem for a contest (with access control)
+router.get("/:contest_id/problem/:problem_id", async (req, res) => {
+  const supabase = req.supabase;
+  const { contest_id, problem_id } = req.params;
+  const user_id = req.query.user_id;
+  try {
+    // Fetch contest and its problems
+    const { data: contest, error: contestError } = await supabase
+      .from("contest")
+      .select("*, contest_problem(problem_id, alias)")
+      .eq("contest_id", contest_id)
+      .single();
+    if (contestError || !contest) return res.status(404).json({ error: "Contest not found" });
+
+    // Check if contest started
+    const now = new Date();
+    const started = now >= new Date(contest.start_time);
+    let is_participant = false;
+    if (user_id) {
+      // Check if user is a participant
+      const { data: part } = await supabase
+        .from("user_participant")
+        .select("*")
+        .eq("contest_id", contest_id)
+        .eq("user_id", user_id)
+        .maybeSingle();
+      is_participant = !!part;
+    }
+
+    // Only allow access if contest started and user is a participant
+    if (!started || !is_participant) {
+      return res.status(403).json({ error: "You do not have access to this problem." });
+    }
+
+    // Find the problem in the contest_problem list
+    const cp = (contest.contest_problem || []).find((p) => p.problem_id == problem_id);
+    if (!cp) return res.status(404).json({ error: "Problem not found in this contest." });
+
+    // Fetch problem details
+    const { data: problem, error: probErr } = await supabase
+      .from("Problem")
+      .select("*")
+      .eq("problem_id", problem_id)
+      .single();
+    if (probErr || !problem) return res.status(404).json({ error: "Problem not found." });
+
+    // Attach alias if present
+    if (cp.alias) problem.alias = cp.alias;
+
+    res.json(problem);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // List all contests
 router.get("/", async (req, res) => {

@@ -13,6 +13,7 @@ const ContestListPage = () => {
   const [contests, setContests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const listRef = useRef();
@@ -72,6 +73,11 @@ const ContestListPage = () => {
     }
   }, [contests]);
 
+  // Filter contests by search
+  const filteredContests = contests.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div
       ref={listRef}
@@ -97,7 +103,7 @@ const ContestListPage = () => {
           ref={containerRef}
           className="max-w-3xl mx-auto bg-gray-900/80 backdrop-blur-md rounded-xl shadow-2xl border border-cyan-700/50 shadow-cyan-500/20 p-10"
         >
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-6">
             <h1
               className="text-4xl md:text-5xl font-extrabold text-cyan-400 tracking-wide"
               style={{
@@ -106,12 +112,21 @@ const ContestListPage = () => {
             >
               Virtual Contests
             </h1>
-            <button
-              className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-white font-bold py-2.5 px-7 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] focus:outline-none focus:ring-4 focus:ring-cyan-500/50"
-              onClick={() => navigate("/contests/create")}
-            >
-              + Create Contest
-            </button>
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <input
+                type="text"
+                placeholder="Search contests by name..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="px-4 py-2 rounded-lg bg-gray-800/80 border-2 border-cyan-400 text-cyan-200 focus:outline-none focus:border-pink-400 transition shadow w-64"
+              />
+              <button
+                className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-white font-bold py-2.5 px-7 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] focus:outline-none focus:ring-4 focus:ring-cyan-500/50"
+                onClick={() => navigate("/contests/create")}
+              >
+                + Create Contest
+              </button>
+            </div>
           </div>
           {loading ? (
             <div className="text-center text-cyan-400 text-xl mt-16">
@@ -123,7 +138,7 @@ const ContestListPage = () => {
             </div>
           ) : (
             <ul className="space-y-7 mt-8">
-              {contests.map((contest) => (
+              {filteredContests.map((contest) => (
                 <li
                   key={contest.contest_id}
                   className="relative bg-gray-800/80 border border-cyan-700/40 rounded-xl p-7 shadow-lg hover:shadow-cyan-500/30 hover:border-cyan-400 transition cursor-pointer group"
@@ -172,7 +187,7 @@ const ContestListPage = () => {
               ))}
             </ul>
           )}
-          {!loading && contests.length === 0 && !error && (
+          {!loading && filteredContests.length === 0 && !error && (
             <div className="text-center text-cyan-400 text-xl mt-16">
               No contests found.
             </div>

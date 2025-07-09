@@ -95,9 +95,11 @@ const ContestProblemPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/contests/${contestId}/problem/${problemId}`
-        );
+        let url = `/api/contests/${contestId}/problem/${problemId}`;
+        if (user && user.id) {
+          url += `?user_id=${encodeURIComponent(user.id)}`;
+        }
+        const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch problem");
         const data = await res.json();
         setProblem(data);
@@ -111,7 +113,7 @@ const ContestProblemPage = () => {
       }
     };
     fetchProblem();
-  }, [contestId, problemId]);
+  }, [contestId, problemId, user]);
 
   useEffect(() => {
     if (mainRef.current) {

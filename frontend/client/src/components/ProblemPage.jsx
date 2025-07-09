@@ -6,8 +6,10 @@ import ErrorBoundary from "./ErrorBoundary";
 import SampleTest from "./SampleTest";
 import StatusAnimation from "./StatusAnimation";
 import TestRunner from "./TestRunner";
-import ParsedHtmlContent from "./ParsedHtmlContent";
-import ParsedMarkdownContent from "./ParsedHtmlContent";
+import 'katex/dist/katex.min.css';
+// import '../inline-tt.css';
+import { BlockMath, InlineMath } from 'react-katex';
+import parse, { domToReact } from 'html-react-parser';
 import SubmissionHistory from "./SubmissionHistory";
 
 const TABS = [
@@ -48,7 +50,7 @@ const DEFAULT_MEMORY_LIMIT_KB = 262144;
 
 export default function ProblemPage() {
   // Get problem ID from URL parameters
-  const { external_id } = useParams();
+  const { problem_id } = useParams();
   const navigate = useNavigate(); // For programmatic navigation
   // Get user and Supabase client from AuthContext
   const { user: authUser, supabase: supabaseFromAuth } = useAuth();
@@ -121,7 +123,7 @@ export default function ProblemPage() {
   // Effect to fetch problem details from the backend API
   useEffect(() => {
     const fetchProblemDetails = async () => {
-      if (!external_id) {
+      if (!problem_id) {
         setErrorProblem("Problem ID missing.");
         setLoadingProblem(false);
         return;
@@ -130,7 +132,7 @@ export default function ProblemPage() {
       setErrorProblem("");
       try {
         // Fetch from real backend API
-        const res = await fetch(`/api/problems/${external_id}`);
+        const res = await fetch(`/api/problems/${problem_id}`);
         if (!res.ok) {
           const errorText = await res.text();
           throw new Error(
@@ -172,11 +174,22 @@ export default function ProblemPage() {
               ".sample-tests .sample-test"
             );
             if (sampleTests.length > 0) {
+              const decode = (str) => {
+                const txt = document.createElement('textarea');
+                txt.innerHTML = str;
+                return txt.value;
+              };
               samples = Array.from(sampleTests).map((sampleDiv) => {
-                const input =
-                  sampleDiv.querySelector("div.input pre")?.innerText || "";
-                const output =
-                  sampleDiv.querySelector("div.output pre")?.innerText || "";
+                let input = sampleDiv.querySelector("div.input pre")?.innerHTML || "";
+                let output = sampleDiv.querySelector("div.output pre")?.innerHTML || "";
+                // Convert <br> to newlines
+                input = input.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                output = output.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                input = decode(input);
+                output = decode(output);
+                // Remove any remaining HTML tags
+                input = input.replace(/<[^>]+>/g, "");
+                output = output.replace(/<[^>]+>/g, "");
                 return { input, output };
               });
             } else {
@@ -188,10 +201,26 @@ export default function ProblemPage() {
                 i < Math.max(inputs.length, outputs.length);
                 i++
               ) {
-                samples.push({
-                  input: inputs[i]?.innerText || "",
-                  output: outputs[i]?.innerText || "",
-                });
+                let input = inputs[i]?.innerHTML || "";
+                let output = outputs[i]?.innerHTML || "";
+                // Replace <br> and <br/> with real newlines
+                input = input.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                output = output.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                // Replace &nbsp; with space
+                input = input.replace(/&nbsp;/gi, " ");
+                output = output.replace(/&nbsp;/gi, " ");
+                // Remove all other HTML tags (but keep newlines)
+                input = input.replace(/<[^>]+>/g, "");
+                output = output.replace(/<[^>]+>/g, "");
+                // Decode HTML entities (after tag removal)
+                const decode = (str) => {
+                  const txt = document.createElement('textarea');
+                  txt.innerHTML = str;
+                  return txt.value;
+                };
+                input = decode(input);
+                output = decode(output);
+                samples.push({ input, output });
               }
             }
           } catch (e) {
@@ -210,7 +239,7 @@ export default function ProblemPage() {
       }
     };
     fetchProblemDetails(); // Initiate problem fetching
-  }, [external_id]); // Re-run when external_id changes
+  }, [problem_id]); // Re-run when problem_id changes
 
   // Handler for file input changes (for uploading code files)
   const onFileChange = (e) => {
@@ -526,6 +555,87 @@ export default function ProblemPage() {
     return htmlOrText;
   }
 
+
+
+  function renderHtmlWithMath(html) {
+    if (!html) return null;
+
+
+    // Regexes for math
+    const blockMathRegex = /\${3}([\s\S]+?)\${3}/g; // $$$...$$$
+    const inlineMathRegex = /\${2}([\s\S]+?)\${2}/g; // $$...$$
+    const singleMathRegex = /\$([^$\n]+?)\$/g; // $...$
+
+    function parseMath(text) {
+      // Replace $$$...$$$ (always as inline math)
+      let elements = [];
+      let lastIndex = 0;
+      let match;
+      while ((match = blockMathRegex.exec(text))) {
+        if (match.index > lastIndex) {
+          elements.push(text.slice(lastIndex, match.index));
+        }
+        const mathContent = match[1].trim();
+        elements.push(<InlineMath key={match.index}>{mathContent}</InlineMath>);
+        lastIndex = blockMathRegex.lastIndex;
+      }
+      if (lastIndex < text.length) {
+        elements.push(text.slice(lastIndex));
+      }
+      // Now handle $$...$$ and $...$ as inline math in each part
+      elements = elements.flatMap((part, i) => {
+        if (typeof part !== 'string') return [part];
+        // First $$...$$
+        let subparts = [];
+        let last = 0;
+        let m;
+        while ((m = inlineMathRegex.exec(part))) {
+          if (m.index > last) subparts.push(part.slice(last, m.index));
+          subparts.push(<InlineMath key={i + '-d-' + m.index}>{m[1]}</InlineMath>);
+          last = inlineMathRegex.lastIndex;
+        }
+        if (last < part.length) subparts.push(part.slice(last));
+        // Now $...$
+        return subparts.flatMap((sp, j) => {
+          if (typeof sp !== 'string') return [sp];
+          let sps = [];
+          let l = 0;
+          let sm;
+          while ((sm = singleMathRegex.exec(sp))) {
+            if (sm.index > l) sps.push(sp.slice(l, sm.index));
+            sps.push(<InlineMath key={i + '-s-' + j + '-' + sm.index}>{sm[1]}</InlineMath>);
+            l = singleMathRegex.lastIndex;
+          }
+          if (l < sp.length) sps.push(sp.slice(l));
+          return sps;
+        });
+      });
+      return elements;
+    }
+
+    return parse(html, {
+      replace: (domNode) => {
+        // Render <span class="tex-font-style-tt">...</span> as Codeforces-like inline code
+        // if (
+        //   domNode.type === 'tag' &&
+        //   domNode.name === 'span' &&
+        //   domNode.attribs &&
+        //   domNode.attribs.class &&
+        //   domNode.attribs.class.includes('tex-font-style-tt')
+        // ) {
+        //   return (
+        //     <span className="inline-tt">
+        //       {domToReact(domNode.children)}
+        //     </span>
+        //   );
+        // }
+        if (domNode.type === 'text') {
+          return <>{parseMath(domNode.data)}</>;
+        }
+      },
+    });
+  }
+
   // Function to render content based on the active tab
   const renderTabContent = () => {
     if (!problem)
@@ -536,31 +646,56 @@ export default function ProblemPage() {
       );
     switch (activeTab) {
       case "Statement":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(stmtHTML)} />;
+        return <div className="prose prose-invert max-w-none text-lg">{renderHtmlWithMath(stmtHTML)}</div>;
       case "Input":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(inputHTML)} />;
+        return <div className="prose prose-invert max-w-none text-lg">{renderHtmlWithMath(inputHTML)}</div>;
       case "Output":
-        return <ParsedMarkdownContent markdown={htmlOrTextToMarkdown(outputHTML)} />;
+        return <div className="prose prose-invert max-w-none text-lg">{renderHtmlWithMath(outputHTML)}</div>;
       case "Examples":
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-              {samplesFromProblem.length > 0 ? (
-                samplesFromProblem.map((sample, idx) => (
-                  <SampleTest
-                    key={idx}
-                    input={sample.input}
-                    output={sample.output}
-                  />
-                ))
-              ) : (
-                <div className="col-span-full p-4 text-center rounded-lg border border-cyan-700/30 bg-gray-800/50">
-                  <p className="text-gray-400">
-                    No sample test cases available.
-                  </p>
-                </div>
-              )}
-            </div>
+            {samplesFromProblem.length > 0 ? (
+              <div className="w-full flex flex-col gap-6">
+                {samplesFromProblem.map((sample, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row gap-4 w-full border border-cyan-400/40 rounded-xl p-4 bg-gray-900/60" style={{minWidth:0}}>
+                    {/* Sample Input */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-cyan-300 font-mono text-xs mb-1 tracking-widest uppercase">Sample Input</div>
+                      <div className="relative">
+                        <pre className="block w-full font-mono text-base bg-gray-900/80 rounded-md border border-cyan-700/40 p-3 whitespace-pre-wrap overflow-x-auto select-all" style={{minHeight:'2.5em'}}>{sample.input}</pre>
+                        <button
+                          className="absolute top-2 right-2 px-2 py-1 text-xs bg-cyan-700/80 hover:bg-cyan-500/80 text-white rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                          onClick={() => navigator.clipboard.writeText(sample.input)}
+                          title="Copy sample input"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                    {/* Sample Output */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-pink-300 font-mono text-xs mb-1 tracking-widest uppercase">Sample Output</div>
+                      <div className="relative">
+                        <pre className="block w-full font-mono text-base bg-gray-900/80 rounded-md border border-pink-400/40 p-3 whitespace-pre-wrap overflow-x-auto select-all" style={{minHeight:'2.5em'}}>{sample.output}</pre>
+                        <button
+                          className="absolute top-2 right-2 px-2 py-1 text-xs bg-pink-700/80 hover:bg-pink-500/80 text-white rounded focus:outline-none focus:ring-2 focus:ring-pink-400 transition"
+                          onClick={() => navigator.clipboard.writeText(sample.output)}
+                          title="Copy sample output"
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="col-span-full p-4 text-center rounded-lg border border-cyan-700/30 bg-gray-800/50">
+                <p className="text-gray-400">
+                  No sample test cases available.
+                </p>
+              </div>
+            )}
           </motion.div>
         );
       case "Submissions":
@@ -791,15 +926,42 @@ export default function ProblemPage() {
                     transition={{ duration: 0.2 }}
                   >
                     {activeTab === "Examples" ? (
-                      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         {samplesFromProblem.length > 0 ? (
-                          samplesFromProblem.map((sample, idx) => (
-                            <SampleTest
-                              key={idx}
-                              input={sample.input}
-                              output={sample.output}
-                            />
-                          ))
+                          <div className="w-full flex flex-col gap-6">
+                            {samplesFromProblem.map((sample, idx) => (
+                              <div key={idx} className="flex flex-col sm:flex-row gap-4 w-full border border-cyan-400/40 rounded-xl p-4 bg-gray-900/60" style={{minWidth:0}}>
+                                {/* Sample Input */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-cyan-300 font-mono text-xs mb-1 tracking-widest uppercase">Sample Input</div>
+                                  <div className="relative">
+                                    <pre className="block w-full font-mono text-base bg-gray-900/80 rounded-md border border-cyan-700/40 p-3 whitespace-pre-wrap overflow-x-auto select-all" style={{minHeight:'2.5em'}}>{sample.input}</pre>
+                                    <button
+                                      className="absolute top-2 right-2 px-2 py-1 text-xs bg-cyan-700/80 hover:bg-cyan-500/80 text-white rounded focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                                      onClick={() => navigator.clipboard.writeText(sample.input)}
+                                      title="Copy sample input"
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
+                                </div>
+                                {/* Sample Output */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-pink-300 font-mono text-xs mb-1 tracking-widest uppercase">Sample Output</div>
+                                  <div className="relative">
+                                    <pre className="block w-full font-mono text-base bg-gray-900/80 rounded-md border border-pink-400/40 p-3 whitespace-pre-wrap overflow-x-auto select-all" style={{minHeight:'2.5em'}}>{sample.output}</pre>
+                                    <button
+                                      className="absolute top-2 right-2 px-2 py-1 text-xs bg-pink-700/80 hover:bg-pink-500/80 text-white rounded focus:outline-none focus:ring-2 focus:ring-pink-400 transition"
+                                      onClick={() => navigator.clipboard.writeText(sample.output)}
+                                      title="Copy sample output"
+                                    >
+                                      Copy
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         ) : (
                           <div className="col-span-full p-4 text-center rounded-lg border border-cyan-700/30 bg-gray-800/50">
                             <p className="text-gray-400">
@@ -807,7 +969,7 @@ export default function ProblemPage() {
                             </p>
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     ) : (
                       renderTabContent()
                     )}

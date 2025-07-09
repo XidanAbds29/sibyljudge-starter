@@ -1,0 +1,16 @@
+/* Remove backticks and background from code tags in problem statements */
+.prose code.cf-tt {
+  background: none !important;
+  color: #e0e0e0;
+  font-family: 'JetBrains Mono', 'Fira Mono', 'Menlo', 'Consolas', 'monospace';
+  font-size: 1em;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+  /* Remove pseudo-elements for backticks */
+}
+.prose code.cf-tt::before,
+.prose code.cf-tt::after {
+  content: none !important;
+}
