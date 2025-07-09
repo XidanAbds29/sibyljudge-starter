@@ -16,6 +16,8 @@ import Groups from "./pages/Groups";
 import GroupPage from "./pages/GroupPage";
 import Profile from "./pages/Profile";
 import Community from "./pages/Community";
+import DiscussionPage from "./pages/DiscussionPage";
+import DiscussionThreadPage from "./pages/DiscussionThreadPage";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 
 // Navbar component that uses AuthContext
@@ -93,6 +95,12 @@ function Navbar() {
           >
             FAQ
           </Link>
+          <Link
+            to="/discussions"
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/discussions") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+          >
+            Discussion
+          </Link>
 
           {user ? (
             <>
@@ -160,6 +168,8 @@ function AppLayoutAndRoutes() {
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/discussions" element={<DiscussionPage />} />
+          <Route path="/discussions/:threadId" element={<DiscussionThreadPage />} />
           <Route path="/contests" element={<ContestListPage />} />
           <Route path="/contests/create" element={<ContestCreatePage />} />
           <Route path="/contests/:contestId" element={<ContestPage />} />

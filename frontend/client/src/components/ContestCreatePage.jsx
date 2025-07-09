@@ -1,18 +1,44 @@
 import React, { useState, useEffect, useRef } from "react";
-import bgImage from "../assets/bg.png";
 import { useAuth } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 import { gsap } from "gsap";
+
+function NeonGlowSVG({ className = "", style = {}, ...props }) {
+  return (
+    <svg
+      className={"absolute pointer-events-none z-0 " + className}
+      style={style}
+      width="100%"
+      height="100%"
+      viewBox="0 0 1440 200"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="none"
+      {...props}
+    >
+      <defs>
+        <radialGradient id="neon-glow-create" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ec4899" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#ec4899" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="720" cy="100" rx="700" ry="60" fill="url(#neon-glow-create)" />
+    </svg>
+  );
+}
 
 const ContestCreatePage = () => {
   const [step, setStep] = useState(1);
   const [contestInfo, setContestInfo] = useState({
     name: "",
+    openness: "Public",
+    password: "",
+    start_date: "",
     start_time: "",
+    end_date: "",
     end_time: "",
     description: "",
     difficulty: "",
-    password: "",
   });
   const [selectedProblems, setSelectedProblems] = useState([]);
   const [problems, setProblems] = useState([]);
@@ -22,13 +48,12 @@ const ContestCreatePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const containerRef = useRef(null);
-  const createRef = useRef();
 
   useEffect(() => {
     // Fetch real problems from backend
     const fetchProblems = async () => {
       try {
-        const res = await fetch("/api/problems?limit=100");
+        const res = await fetch("/api/problems?limit=100"); // Adjust limit as needed
         if (!res.ok) throw new Error("Failed to fetch problems");
         const data = await res.json();
         setProblems(
@@ -45,6 +70,7 @@ const ContestCreatePage = () => {
           })) || []
         );
       } catch (err) {
+        setError("Could not load problems for selection.");
         setProblems([]);
       }
     };
@@ -52,18 +78,9 @@ const ContestCreatePage = () => {
   }, []);
 
   useEffect(() => {
-    // GSAP animation for container
-    gsap.fromTo(
-      containerRef.current,
-      { opacity: 0, y: 50 },
-      { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }
-    );
-  }, []);
-
-  useEffect(() => {
-    if (createRef.current) {
+    if (containerRef.current) {
       gsap.fromTo(
-        createRef.current,
+        containerRef.current,
         { opacity: 0, y: 40, filter: "blur(10px)" },
         {
           opacity: 1,
@@ -82,6 +99,11 @@ const ContestCreatePage = () => {
     );
   };
 
+  const getCombinedDateTime = (date, time) => {
+    if (!date || !time) return "";
+    return `${date}T${time}`;
+  };
+
   const handleCreateContest = async () => {
     if (!user) {
       setError("You must be logged in to create a contest.");
@@ -96,11 +118,11 @@ const ContestCreatePage = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: contestInfo.name,
-          start_time: contestInfo.start_time,
-          end_time: contestInfo.end_time,
+          start_time: getCombinedDateTime(contestInfo.start_date, contestInfo.start_time),
+          end_time: getCombinedDateTime(contestInfo.end_date, contestInfo.end_time),
           description: contestInfo.description,
           difficulty: contestInfo.difficulty,
-          password: contestInfo.password,
+          password: contestInfo.openness === "Private" ? contestInfo.password : "",
           problems: selectedProblems,
           created_by: user.id,
         }),
@@ -110,8 +132,8 @@ const ContestCreatePage = () => {
         throw new Error(error || "Failed to create contest");
       }
       const { contest } = await res.json();
-      setSuccess("Contest created!");
-      setTimeout(() => navigate(`/contests/${contest.contest_id}`), 1200);
+      setSuccess("Contest created successfully!");
+      setTimeout(() => navigate(`/contests/${contest.contest_id}`), 1500);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -119,247 +141,283 @@ const ContestCreatePage = () => {
     }
   };
 
-  return (
-    <div
-      ref={createRef}
-      className="min-h-screen bg-gray-950 text-gray-100 font-['Orbitron',_sans-serif] antialiased"
-      style={{
-        backgroundImage: `url(${bgImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        position: "relative",
-      }}
-    >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute inset-0 rounded-3xl overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/10 via-transparent to-pink-400/10 w-full h-full"></div>
-          <div className="absolute inset-0 w-full h-full opacity-20 bg-[radial-gradient(circle_at_30%_30%,rgba(0,255,255,0.18)_0,transparent_70%)] animate-pulse"></div>
-          <div className="absolute inset-0 w-full h-full opacity-10 bg-[radial-gradient(circle_at_70%_80%,rgba(255,0,234,0.12)_0,transparent_70%)]"></div>
-        </div>
-      </div>
-      <div className="relative z-10 container mx-auto px-4 py-24">
-        <div
-          ref={containerRef}
-          className="max-w-2xl mx-auto bg-gray-900/80 backdrop-blur-md rounded-xl shadow-2xl border border-cyan-700/50 shadow-cyan-500/20 p-10"
-        >
-          <div className="flex items-center gap-6 mb-10">
-            <div className="flex-shrink-0 flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 shadow-lg border-4 border-cyan-400 animate-pulse">
-              <svg
-                className="w-12 h-12 text-gray-900"
-                viewBox="0 0 64 32"
-                fill="none"
-              >
-                <rect
-                  x="2"
-                  y="12"
-                  width="60"
-                  height="8"
-                  rx="4"
-                  fill="#00fff7"
-                  opacity="0.18"
+  const renderStep = () => {
+    if (step === 1) {
+      return (
+        <section>
+          <h2 className="text-2xl font-bold text-pink-400 mb-6 pb-2 border-b-2 border-pink-700/50" style={{ textShadow: "0 0 8px rgba(236, 72, 153, 0.5)" }}>
+            Contest Details
+          </h2>
+          <form className="space-y-4">
+            <div>
+              <label className="block mb-1 text-sm text-gray-400 font-medium">Contest Name <span className="text-pink-400">*</span></label>
+              <input
+                className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                type="text"
+                placeholder="Enter a cool name..."
+                value={contestInfo.name}
+                onChange={e => setContestInfo({ ...contestInfo, name: e.target.value })}
+              />
+            </div>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block mb-1 text-sm text-gray-400 font-medium">Openness <span className="text-pink-400">*</span></label>
+                <select
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  value={contestInfo.openness}
+                  onChange={e => setContestInfo({ ...contestInfo, openness: e.target.value, password: "" })}
+                >
+                  <option value="Public">Public</option>
+                  <option value="Private">Private</option>
+                </select>
+              </div>
+            </div>
+            {contestInfo.openness === "Private" && (
+              <div>
+                <label className="block mb-1 text-sm text-gray-400 font-medium">Password <span className="text-pink-400">*</span></label>
+                <input
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-pink-700 focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200"
+                  type="password"
+                  placeholder="Required for private contests"
+                  value={contestInfo.password}
+                  onChange={e => setContestInfo({ ...contestInfo, password: e.target.value })}
+                  required
                 />
-                <rect
-                  x="8"
-                  y="14"
-                  width="48"
-                  height="4"
-                  rx="2"
-                  fill="#00fff7"
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-1 text-sm text-gray-400 font-medium">Start Date <span className="text-pink-400">*</span></label>
+                <input
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  type="date"
+                  value={contestInfo.start_date}
+                  onChange={e => setContestInfo({ ...contestInfo, start_date: e.target.value })}
                 />
-                <rect
-                  x="54"
-                  y="10"
-                  width="6"
-                  height="12"
-                  rx="3"
-                  fill="#ff00ea"
+              </div>
+              <div>
+                <label className="block mb-1 text-sm text-gray-400 font-medium">Start Time <span className="text-pink-400">*</span></label>
+                <input
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  type="time"
+                  value={contestInfo.start_time}
+                  onChange={e => setContestInfo({ ...contestInfo, start_time: e.target.value })}
+                  step="60"
                 />
-                <circle cx="12" cy="16" r="3" fill="#fffb00" />
-                <rect
-                  x="18"
-                  y="15"
-                  width="6"
-                  height="2"
-                  rx="1"
-                  fill="#fffb00"
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block mb-1 text-sm text-gray-400 font-medium">End Date <span className="text-pink-400">*</span></label>
+                <input
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  type="date"
+                  value={contestInfo.end_date}
+                  onChange={e => setContestInfo({ ...contestInfo, end_date: e.target.value })}
                 />
-              </svg>
+              </div>
+              <div>
+                <label className="block mb-1 text-sm text-gray-400 font-medium">End Time <span className="text-pink-400">*</span></label>
+                <input
+                  className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                  type="time"
+                  value={contestInfo.end_time}
+                  onChange={e => setContestInfo({ ...contestInfo, end_time: e.target.value })}
+                  step="60"
+                />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-cyan-400 tracking-wide mb-1">
-                Create Virtual Contest
-              </h1>
-              <div className="text-xs text-yellow-300 font-mono tracking-widest bg-yellow-900/30 px-3 py-1 rounded-lg border border-yellow-400/30 inline-block shadow">
-                SIBYL SYSTEM
-              </div>
-            </div>
-          </div>
-          {error && <div className="mb-4 text-red-400 font-bold">{error}</div>}
-          {success && (
-            <div className="mb-4 text-green-400 font-bold">{success}</div>
-          )}
-          {/* Tab/Section 1: Contest Info */}
-          {step === 1 && (
-            <section>
-              <h2 className="text-xl font-bold text-pink-400 mb-6 tracking-wide">
-                Contest Info
-              </h2>
-              <form>
-                <input
-                  className="block w-full bg-gray-800/80 border-2 border-cyan-400 rounded-lg text-lg text-cyan-100 px-5 py-3 mb-6 focus:outline-none focus:border-pink-400 shadow transition"
-                  type="text"
-                  placeholder="Contest Name"
-                  value={contestInfo.name}
-                  onChange={(e) =>
-                    setContestInfo({ ...contestInfo, name: e.target.value })
-                  }
-                />
-                <input
-                  className="block w-full bg-gray-800/80 border-2 border-cyan-400 rounded-lg text-lg text-cyan-100 px-5 py-3 mb-6 focus:outline-none focus:border-pink-400 shadow transition"
-                  type="datetime-local"
-                  placeholder="Start Time"
-                  value={contestInfo.start_time}
-                  onChange={(e) =>
-                    setContestInfo({
-                      ...contestInfo,
-                      start_time: e.target.value,
-                    })
-                  }
-                />
-                <input
-                  className="block w-full bg-gray-800/80 border-2 border-cyan-400 rounded-lg text-lg text-cyan-100 px-5 py-3 mb-6 focus:outline-none focus:border-pink-400 shadow transition"
-                  type="datetime-local"
-                  placeholder="End Time"
-                  value={contestInfo.end_time}
-                  onChange={(e) =>
-                    setContestInfo({ ...contestInfo, end_time: e.target.value })
-                  }
-                />
-                <input
-                  className="block w-full bg-gray-800/80 border-2 border-cyan-400 rounded-lg text-lg text-cyan-100 px-5 py-3 mb-6 focus:outline-none focus:border-pink-400 shadow transition"
-                  type="text"
-                  placeholder="Difficulty (e.g. Easy, Medium, Hard)"
-                  value={contestInfo.difficulty}
-                  onChange={(e) =>
-                    setContestInfo({
-                      ...contestInfo,
-                      difficulty: e.target.value,
-                    })
-                  }
-                />
-                <textarea
-                  className="block w-full bg-gray-800/80 border-2 border-cyan-400 rounded-lg text-lg text-cyan-100 px-5 py-3 mb-6 focus:outline-none focus:border-pink-400 shadow transition"
-                  placeholder="Description"
-                  value={contestInfo.description}
-                  onChange={(e) =>
-                    setContestInfo({
-                      ...contestInfo,
-                      description: e.target.value,
-                    })
-                  }
-                />
-                <input
-                  className="block w-full bg-gray-800/80 border-2 border-pink-400 rounded-lg text-lg text-pink-200 px-5 py-3 mb-6 focus:outline-none focus:border-cyan-400 shadow transition"
-                  type="password"
-                  placeholder="Password (optional)"
-                  value={contestInfo.password}
-                  onChange={(e) =>
-                    setContestInfo({ ...contestInfo, password: e.target.value })
-                  }
-                />
-              </form>
-              <button
-                className="w-full bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(236,72,153,0.7)] focus:outline-none focus:ring-4 focus:ring-pink-500/50 mt-2"
-                onClick={() => setStep(2)}
+              <label className="block mb-1 text-sm text-gray-400 font-medium">Difficulty</label>
+              <select
+                className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                value={contestInfo.difficulty}
+                onChange={e => setContestInfo({ ...contestInfo, difficulty: e.target.value })}
               >
-                Next: Select Problems
-              </button>
-            </section>
-          )}
-          {/* Tab/Section 2: Problem Selection */}
-          {step === 2 && (
-            <section>
-              <h2 className="text-xl font-bold text-yellow-300 mb-6 tracking-wide">
-                Select Problems
-              </h2>
-              <div className="mb-6">
-                <div className="grid gap-4">
-                  {problems.map((p) => (
-                    <label
-                      key={p.problem_id}
-                      className={`flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all
-                        ${
-                          selectedProblems.includes(p.problem_id)
-                            ? "border-pink-400 bg-gray-800/80 shadow-lg"
-                            : "border-cyan-700/40 bg-gray-900/60 hover:border-cyan-400"
-                        }
-                      `}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedProblems.includes(p.problem_id)}
-                        onChange={() => toggleProblem(p.problem_id)}
-                        className="accent-cyan-400 w-5 h-5 mt-1"
-                      />
-                      <div className="flex-1">
-                        <div className="flex flex-wrap gap-2 items-center mb-1">
-                          <span className="text-cyan-300 font-semibold text-lg">
-                            {p.title}
-                          </span>
-                          <span className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded-full border border-gray-700">
-                            {p.source_name}
-                          </span>
-                          <span className="px-2 py-0.5 text-xs bg-pink-700/30 text-pink-300 rounded-full border border-pink-600/50">
-                            Rating: {p.difficulty}
-                          </span>
-                          <span className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded-full border border-gray-700">
-                            Time: {p.time_limit / 1000}s
-                          </span>
-                          <span className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded-full border border-gray-700">
-                            Memory: {p.mem_limit / 1024}MB
-                          </span>
-                        </div>
-                        {p.tags?.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {p.tags.map((tag, i) => (
-                              <span
-                                key={i}
-                                className="px-2 py-0.5 text-xs bg-sky-800/40 text-sky-300 rounded-full border border-sky-700/60"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  ))}
+                <option value="">Select Difficulty</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+            <div>
+              <label className="block mb-1 text-sm text-gray-400 font-medium">Description</label>
+              <textarea
+                className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+                placeholder="A brief, exciting description..."
+                rows="3"
+                value={contestInfo.description}
+                onChange={e => setContestInfo({ ...contestInfo, description: e.target.value })}
+              />
+            </div>
+          </form>
+          {/* Removed the Next: Select Problems button here as requested */}
+        </section>
+      );
+    }
+    if (step === 2) {
+      return (
+        <section>
+          <h2 className="text-2xl font-bold text-pink-400 mb-6 pb-2 border-b-2 border-pink-700/50" style={{ textShadow: "0 0 8px rgba(236, 72, 153, 0.5)" }}>
+            Select Problems
+          </h2>
+          <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-2">
+            {problems.length > 0 ? problems.map((p) => (
+              <label
+                key={p.problem_id}
+                className={`group relative flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all
+                  ${
+                    selectedProblems.includes(p.problem_id)
+                      ? "border-pink-400 bg-gray-800/80 shadow-lg"
+                      : "border-cyan-700/40 bg-gray-900/60 hover:border-cyan-400"
+                  }
+                `}
+              >
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-80 transition-all duration-300 z-0">
+                  <NeonGlowSVG className="w-full h-full" style={{ opacity: 0.5 }} />
                 </div>
-                {selectedProblems.length > 0 && (
-                  <div className="mt-6 text-cyan-300 text-sm">
-                    <span className="font-semibold">Selected Problems:</span>{" "}
-                    {selectedProblems.length}
+                <div className="relative z-10 flex items-start gap-4 w-full">
+                  <input
+                    type="checkbox"
+                    checked={selectedProblems.includes(p.problem_id)}
+                    onChange={() => toggleProblem(p.problem_id)}
+                    className="accent-pink-500 w-5 h-5 mt-1 flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <div className="text-cyan-300 font-semibold text-lg">
+                      {p.title}
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center mt-1.5">
+                      <span className="px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
+                        {p.source_name}
+                      </span>
+                      {p.difficulty && (
+                        <span className="px-2.5 py-1 text-xs font-medium bg-pink-700/30 text-pink-300 rounded-full border border-pink-600/50">
+                          Rating: {p.difficulty}
+                        </span>
+                      )}
+                    </div>
+                    {p.tags?.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {p.tags.map((tag, i) => (
+                          <span
+                            key={i}
+                            className="px-2 py-0.5 text-xs bg-sky-800/40 text-sky-300 rounded-full border border-sky-700/60"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  className="w-full sm:w-auto bg-gradient-to-r from-gray-700 to-cyan-700 hover:from-gray-600 hover:to-cyan-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition hover:scale-105"
-                  onClick={() => setStep(1)}
-                >
-                  Back
-                </button>
-                <button
-                  className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition hover:scale-105"
-                  onClick={handleCreateContest}
-                  disabled={selectedProblems.length === 0 || loading}
-                >
-                  {loading ? "Creating..." : "Create Contest"}
-                </button>
-              </div>
-            </section>
+                </div>
+              </label>
+            )) : <p className="text-gray-400">No problems available to select.</p>}
+          </div>
+          {selectedProblems.length > 0 && (
+            <div className="mt-4 text-cyan-300 text-sm">
+              <span className="font-semibold">Selected:</span> {selectedProblems.length} problem(s)
+            </div>
+          )}
+        </section>
+      );
+    }
+  };
+
+  const validateStep1 = () => {
+    const { name, openness, password, start_date, start_time, end_date, end_time, description, difficulty } = contestInfo;
+    if (!name || !openness || !start_date || !start_time || !end_date || !end_time) {
+      setError("Please fill in all required fields.");
+      return false;
+    }
+    if (openness === "Private" && !password) {
+      setError("Password is required for private contests.");
+      return false;
+    }
+    if (new Date(`${start_date}T${start_time}`) >= new Date(`${end_date}T${end_time}`)) {
+      setError("End time must be after start time.");
+      return false;
+    }
+    setError(null);
+    return true;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-950 text-white p-0 relative overflow-hidden">
+      <div className="fixed inset-0 w-screen h-screen z-0 left-0 top-0">
+        <div className="absolute inset-0 pointer-events-none z-10">
+          <svg width="100vw" height="100vh" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
+            <defs>
+              <radialGradient id="cyanglow" cx="50%" cy="50%" r="80%">
+                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.38" />
+                <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.18" />
+                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            <rect width="1920" height="1080" fill="url(#cyanglow)" />
+          </svg>
+        </div>
+      </div>
+      <div
+        ref={containerRef}
+        className="max-w-4xl mx-auto bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-lg border border-cyan-500/20 relative z-10 min-h-screen flex flex-col justify-center"
+      >
+        <div className="relative">
+          <NeonGlowSVG style={{ top: "-50px" }} />
+          <h1 className="text-4xl font-bold text-center mb-2 text-cyan-300" style={{ textShadow: "0 0 12px rgba(56, 189, 248, 0.5)" }}>
+            Create New Contest
+          </h1>
+          <p className="text-center text-gray-400 mb-8">
+            Forge a new challenge for the world to face.
+          </p>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/60 text-red-200 rounded-lg border border-red-700 relative z-10">{error}</div>
+        )}
+        {success && (
+          <div className="bg-green-500/20 border border-green-500 text-green-300 px-4 py-3 rounded-lg relative mb-4 animate-pulse">
+            {success}
+          </div>
+        )}
+
+        <div className="relative p-6 bg-gray-800/50 rounded-xl border border-gray-700/50">
+          {renderStep()}
+        </div>
+
+        <div className="flex justify-between items-center mt-8">
+          {step === 1 && (
+            <button
+              onClick={() => navigate('/contests')}
+              className="px-6 py-2 font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors duration-200"
+            >
+              Cancel
+            </button>
+          )}
+          {step === 2 && (
+            <button
+              onClick={() => setStep(step - 1)}
+              className="px-6 py-2 font-semibold text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors duration-200"
+            >
+              Back
+            </button>
+          )}
+          <div className="flex-grow"></div>
+          {step < 2 ? (
+            <button
+              onClick={() => setStep(step + 1)}
+              className="px-6 py-2 font-semibold text-black bg-cyan-400 rounded-lg hover:bg-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.5)] transition-all duration-200"
+            >
+              Next: Select Problems
+            </button>
+          ) : (
+            <button
+              onClick={handleCreateContest}
+              disabled={loading}
+              className="px-6 py-2 font-semibold text-black bg-pink-500 rounded-lg hover:bg-pink-400 shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Creating..." : "Create Contest"}
+            </button>
           )}
         </div>
       </div>

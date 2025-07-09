@@ -60,6 +60,7 @@ const submissionRoutes = require("./routes/submissionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const groupRoutes = require("./routes/groupRoutes");
+const discussionRoutes = require("./routes/DiscussionRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use(
@@ -105,9 +106,26 @@ app.use(
 );
 app.use(
   "/api/groups",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
   groupRoutes
 );
-console.log("✅ All routes mounted");
+app.use(
+  "/api/discussions",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  discussionRoutes
+);
+
+// ─── Error Handling ──────────────────────────────
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something broke!");
+});
 
 // ─── Start Server ────────────────────────────────
 const PORT = process.env.PORT || 5050;

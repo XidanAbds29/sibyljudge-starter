@@ -148,216 +148,217 @@ export default function ProblemList() {
       ref={listRef}
       className="p-4 sm:p-6 min-h-screen bg-gray-950 text-gray-200"
     >
-      <div className="max-w-4xl mx-auto mb-6 p-4 bg-gray-900/80 backdrop-blur-sm flex flex-wrap gap-4 items-end rounded-lg shadow-xl border border-cyan-700/40">
-        {/* Filters and Refresh Button */}
-        <div>
-          <label
-            htmlFor="judgeSelect"
-            className="block mb-1 text-sm text-gray-400 font-medium"
-          >
-            Source Judge
-          </label>
-          <select
-            id="judgeSelect"
-            value={judgeId}
-            onChange={(e) => setJudgeId(e.target.value)}
-            className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-          >
-            {JUDGES.map((j) => (
-              <option key={j.id} value={j.id}>
-                {j.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="relative" ref={tagDropdownRef}>
-          <label className="block mb-1 text-sm text-gray-400 font-medium">
-            Tags
-          </label>
-          <button
-            type="button"
-            className={`w-full min-w-[160px] flex flex-wrap items-center gap-1 px-3 py-2 bg-gray-800 text-gray-200 rounded-lg border-2 border-cyan-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 shadow-md ${
-              tagDropdownOpen ? "ring-2 ring-cyan-400 border-cyan-400" : ""
-            }`}
-            onClick={() => setTagDropdownOpen((v) => !v)}
-            style={{ minHeight: "2.5rem" }}
-          >
-            {selectedTags.length === 0 ? (
-              <span className="text-gray-400">
-                {tags.length === 0 ? "No tags available" : "Select tags…"}
-              </span>
-            ) : (
-              selectedTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="flex items-center bg-cyan-700/30 text-cyan-200 px-2 py-0.5 rounded-full text-xs font-medium mr-1 mb-1"
-                >
-                  {tag}
-                  <button
-                    type="button"
-                    className="ml-1 text-cyan-300 hover:text-pink-400 focus:outline-none"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedTags(selectedTags.filter((t) => t !== tag));
-                    }}
-                    aria-label={`Remove ${tag}`}
-                  >
-                    <svg
-                      className="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </span>
-              ))
-            )}
-            <svg
-              className={`ml-auto w-4 h-4 text-cyan-400 transition-transform ${
-                tagDropdownOpen ? "rotate-180" : ""
-              }`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
+        <div className="max-w-4xl mx-auto mb-6 p-4 bg-gray-900/80 backdrop-blur-sm flex flex-wrap gap-4 items-end rounded-lg shadow-xl border border-cyan-700/40">
+          {/* Filters and Refresh Button */}
+          <div>
+            <label
+              htmlFor="judgeSelect"
+              className="block mb-1 text-sm text-gray-400 font-medium"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-          {tagDropdownOpen &&
-            ReactDOM.createPortal(
-              <div
-                id="tag-dropdown-portal"
-                className="fixed inset-0 z-[1200]"
-                style={{ pointerEvents: "none" }}
+              Source Judge
+            </label>
+            <select
+              id="judgeSelect"
+              value={judgeId}
+              onChange={(e) => setJudgeId(e.target.value)}
+              className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+            >
+              {JUDGES.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {/* Rating filter moved left of tags */}
+          <div>
+            <label
+              htmlFor="difficultySelect"
+              className="block mb-1 text-sm text-gray-400 font-medium"
+            >
+              Rating
+            </label>
+            <select
+              id="difficultySelect"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+            >
+              <option value="">All</option>
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>
+                  {d || "All"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="relative" ref={tagDropdownRef}>
+            <label className="block mb-1 text-sm text-gray-400 font-medium">
+              Tags
+            </label>
+            <button
+              type="button"
+              className={`w-full min-w-[160px] flex flex-wrap items-center gap-1 px-3 py-2 bg-gray-800 text-gray-200 rounded-lg border-2 border-cyan-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 shadow-md ${
+                tagDropdownOpen ? "ring-2 ring-cyan-400 border-cyan-400" : ""
+              }`}
+              onClick={() => setTagDropdownOpen((v) => !v)}
+              style={{ minHeight: "2.5rem" }}
+            >
+              {selectedTags.length === 0 ? (
+                <span className="text-gray-400">
+                  {tags.length === 0 ? "No tags available" : "Select tags…"}
+                </span>
+              ) : (
+                selectedTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center bg-cyan-700/30 text-cyan-200 px-2 py-0.5 rounded-full text-xs font-medium mr-1 mb-1"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      className="ml-1 text-cyan-300 hover:text-pink-400 focus:outline-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTags(selectedTags.filter((t) => t !== tag));
+                      }}
+                      aria-label={`Remove ${tag}`}
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </span>
+                ))
+              )}
+              <svg
+                className={`ml-auto w-4 h-4 text-cyan-400 transition-transform ${
+                  tagDropdownOpen ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
               >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {tagDropdownOpen &&
+              ReactDOM.createPortal(
                 <div
-                  className="absolute z-[1201] bg-gray-900 border border-cyan-700/60 rounded-xl shadow-2xl p-3 flex flex-col gap-2"
-                  style={{
-                    left:
-                      tagDropdownRef.current?.getBoundingClientRect().left +
-                      window.scrollX,
-                    top:
-                      tagDropdownRef.current?.getBoundingClientRect().bottom +
-                      window.scrollY +
-                      4,
-                    minWidth: 320,
-                    maxWidth: 600,
-                    pointerEvents: "auto", // allow interaction
-                    backgroundColor: "#0f172a",
-                    opacity: 1,
-                  }}
+                  id="tag-dropdown-portal"
+                  className="fixed inset-0 z-[1200]"
+                  style={{ pointerEvents: "none" }}
                 >
-                  {tags.length === 0 ? (
-                    <div className="text-gray-400 text-center py-4">
-                      No tags available.
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="text"
-                        placeholder="Search tags…"
-                        value={tagSearch}
-                        onChange={(e) => setTagSearch(e.target.value)}
-                        className="w-full mb-2 px-2 py-1.5 bg-gray-800 text-gray-200 rounded border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                      />
-                      <div className="flex flex-row flex-wrap gap-2 max-h-32 overflow-y-auto w-full">
-                        {tags.filter((tag) =>
-                          tag.toLowerCase().includes(tagSearch.toLowerCase())
-                        ).length === 0 ? (
-                          <span className="text-gray-400 text-xs px-2 py-2">
-                            No tags found.
-                          </span>
-                        ) : (
-                          tags
-                            .filter((tag) =>
-                              tag
-                                .toLowerCase()
-                                .includes(tagSearch.toLowerCase())
-                            )
-                            .map((tag) => (
-                              <label
-                                key={tag}
-                                className="flex items-center gap-2 px-2 py-1 rounded hover:bg-cyan-800/20 cursor-pointer bg-gray-800/80 border border-cyan-700/30 text-cyan-200 text-xs font-medium mb-1"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={selectedTags.includes(tag)}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setSelectedTags([...selectedTags, tag]);
-                                    } else {
-                                      setSelectedTags(
-                                        selectedTags.filter((t) => t !== tag)
-                                      );
-                                    }
-                                  }}
-                                  className="accent-cyan-500 w-4 h-4 rounded"
-                                />
-                                <span>{tag}</span>
-                              </label>
-                            ))
-                        )}
+                  <div
+                    className="absolute z-[1201] bg-gray-900 border border-cyan-700/60 rounded-xl shadow-2xl p-3 flex flex-col gap-2"
+                    style={{
+                      left:
+                        tagDropdownRef.current?.getBoundingClientRect().left +
+                        window.scrollX,
+                      top:
+                        tagDropdownRef.current?.getBoundingClientRect().bottom +
+                        window.scrollY +
+                        4,
+                      minWidth: 320,
+                      maxWidth: 600,
+                      pointerEvents: "auto", // allow interaction
+                      backgroundColor: "#0f172a",
+                      opacity: 1,
+                    }}
+                  >
+                    {tags.length === 0 ? (
+                      <div className="text-gray-400 text-center py-4">
+                        No tags available.
                       </div>
-                      {selectedTags.length > 0 && (
-                        <button
-                          type="button"
-                          className="mt-3 w-full py-1.5 bg-pink-600 hover:bg-pink-500 text-white rounded font-semibold text-sm transition"
-                          onClick={() => setSelectedTags([])}
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>,
-              document.body
-            )}
-        </div>
-        <div>
-          <label
-            htmlFor="difficultySelect"
-            className="block mb-1 text-sm text-gray-400 font-medium"
+                    ) : (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Search tags…"
+                          value={tagSearch}
+                          onChange={(e) => setTagSearch(e.target.value)}
+                          className="w-full mb-2 px-2 py-1.5 bg-gray-800 text-gray-200 rounded border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                        />
+                        <div className="flex flex-row flex-wrap gap-2 max-h-32 overflow-y-auto w-full">
+                          {tags.filter((tag) =>
+                            tag.toLowerCase().includes(tagSearch.toLowerCase())
+                          ).length === 0 ? (
+                            <span className="text-gray-400 text-xs px-2 py-2">
+                              No tags found.
+                            </span>
+                          ) : (
+                            tags
+                              .filter((tag) =>
+                                tag
+                                  .toLowerCase()
+                                  .includes(tagSearch.toLowerCase())
+                              )
+                              .map((tag) => (
+                                <label
+                                  key={tag}
+                                  className="flex items-center gap-2 px-2 py-1 rounded hover:bg-cyan-800/20 cursor-pointer bg-gray-800/80 border border-cyan-700/30 text-cyan-200 text-xs font-medium mb-1"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedTags.includes(tag)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedTags([...selectedTags, tag]);
+                                      } else {
+                                        setSelectedTags(
+                                          selectedTags.filter((t) => t !== tag)
+                                        );
+                                      }
+                                    }}
+                                    className="accent-cyan-500 w-4 h-4 rounded"
+                                  />
+                                  <span>{tag}</span>
+                                </label>
+                              ))
+                          )}
+                        </div>
+                        {selectedTags.length > 0 && (
+                          <button
+                            type="button"
+                            className="mt-3 w-full py-1.5 bg-pink-600 hover:bg-pink-500 text-white rounded font-semibold text-sm transition"
+                            onClick={() => setSelectedTags([])}
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>,
+                document.body
+              )}
+          </div>
+          <button
+            onClick={() => {
+              setPage(1);
+              fetchProblems();
+            }}
+            disabled={loading}
+            className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-sky-600 text-white font-semibold rounded-lg hover:from-cyan-400 hover:to-sky-500 focus:ring-4 focus:ring-cyan-500/50 focus:outline-none transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Difficulty
-          </label>
-          <select
-            id="difficultySelect"
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-          >
-            <option value="">All</option>
-            {DIFFICULTIES.map((d) => (
-              <option key={d} value={d}>
-                {d || "All"}
-              </option>
-            ))}
-          </select>
+            {loading ? "Loading…" : "Refresh List"}
+          </button>
         </div>
-        <button
-          onClick={() => {
-            setPage(1);
-            fetchProblems();
-          }}
-          disabled={loading}
-          className="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-sky-600 text-white font-semibold rounded-lg hover:from-cyan-400 hover:to-sky-500 focus:ring-4 focus:ring-cyan-500/50 focus:outline-none transition-all duration-300 shadow-md hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {loading ? "Loading…" : "Refresh List"}
-        </button>
-      </div>
 
       {/* Error Message */}
       {errorMsg && (
@@ -374,8 +375,7 @@ export default function ProblemList() {
           className="text-2xl font-bold text-cyan-400 mb-6 pb-2 border-b-2 border-cyan-700/50"
           style={{ textShadow: "0 0 8px rgba(0, 255, 255, 0.5)" }}
         >
-          Problem Archive{" "}
-          <span className="text-gray-400 text-lg">({total} problems)</span>
+          Problem Archive
         </h2>
         {loading ? (
           <div className="text-center py-10">
@@ -414,6 +414,7 @@ export default function ProblemList() {
                       <span className="px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
                         {p.source_name}
                       </span>
+                      {/* Rating moved left of tags, label updated */}
                       {p.difficulty && (
                         <span className="px-2.5 py-1 text-xs font-medium bg-pink-700/30 text-pink-300 rounded-full border border-pink-600/50">
                           Rating: {p.difficulty}
@@ -426,6 +427,7 @@ export default function ProblemList() {
                         Memory: {p.mem_limit / 1024}MB
                       </span>
                     </div>
+                    {/* Tags now always below the info row, after rating */}
                     {p.tags?.length > 0 && (
                       <div className="mt-2.5 flex flex-wrap gap-1.5">
                         {p.tags.map((tag, i) => (
