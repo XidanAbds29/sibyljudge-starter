@@ -60,7 +60,17 @@ router.post("/", async (req, res) => {
       .select("*")
       .eq("problem_id", problem_id)
       .single();
-    if (problemError || !problem) throw new Error("Problem not found");
+    if (problemError) {
+      console.error("[DEBUG] /api/submissions error:", problemError, problemError.code, problemError.details, problemError.hint);
+      return res.status(problemError.status || 500).json({
+        error: problemError.message,
+        code: problemError.code,
+        details: problemError.details,
+        hint: problemError.hint,
+        status: problemError.status
+      });
+    }
+    if (!problem) throw new Error("Problem not found");
 
     // 2. Only handle Codeforces for now
     if (problem.source_oj_id !== 1) {

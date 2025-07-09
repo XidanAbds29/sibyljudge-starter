@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -20,7 +20,31 @@ if (!supabaseUrl || !supabaseServiceKey) {
     "Supabase URL or Service Key missing in environment variables"
   );
 }
+
+// Debug: Log key info to help diagnose 403 errors
+console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.length : 'undefined');
+console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 10) : 'undefined');
+console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY ends with:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.slice(-10) : 'undefined');
+console.log("[DEBUG] supabaseUrl:", supabaseUrl);
+console.log("[DEBUG] supabaseServiceKey length:", supabaseServiceKey.length);
+console.log("[DEBUG] supabaseServiceKey starts with:", supabaseServiceKey.substring(0, 10));
+console.log("[DEBUG] supabaseServiceKey ends with:", supabaseServiceKey.slice(-10));
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Test Supabase connection at startup
+(async () => {
+  try {
+    const { data, error, status } = await supabase.from("Problem").select("*").limit(1);
+    if (error) {
+      console.error("[DEBUG] Supabase test query error:", error, "Status:", status);
+    } else {
+      console.log("[DEBUG] Supabase test query success. Data length:", data.length);
+    }
+  } catch (e) {
+    console.error("[DEBUG] Supabase test query threw exception:", e);
+  }
+})();
 
 // ─── Test Route ──────────────────────────────────
 app.get("/", async (req, res) => {
@@ -83,5 +107,5 @@ app.use("/api/discussions", discussionRoutes);
 console.log("✅ All routes mounted");
 
 // ─── Start Server ────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5050;
 app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
