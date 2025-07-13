@@ -17,9 +17,10 @@ router.get("/:contest_id/problem/:problem_id", async (req, res) => {
       .single();
     if (contestError || !contest) return res.status(404).json({ error: "Contest not found" });
 
-    // Check if contest started
+    // Check contest timing and participant status
     const now = new Date();
-    const started = now >= new Date(contest.start_time);
+    const start = new Date(contest.start_time);
+    const end = new Date(contest.end_time);
     let is_participant = false;
     if (user_id) {
       // Check if user is a participant
@@ -32,10 +33,12 @@ router.get("/:contest_id/problem/:problem_id", async (req, res) => {
       is_participant = !!part;
     }
 
-    // Only allow access if contest started and user is a participant
-    if (!started || !is_participant) {
+    // Access control logic
+    if (now < start || (now >= start && now <= end && !is_participant)) {
+      // Before contest: no one; During contest: only participants
       return res.status(403).json({ error: "You do not have access to this problem." });
     }
+    // After contest: anyone can view
 
     // Find the problem in the contest_problem list
     const cp = (contest.contest_problem || []).find((p) => p.problem_id == problem_id);

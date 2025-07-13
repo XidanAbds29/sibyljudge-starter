@@ -44,12 +44,32 @@ router.post("/logout", (req, res) => {
   res.json({ message: "Logged out" });
 });
 
-// Session check (client should store session token)
+
+// Session check: returns user profile (id, username, email) if logged in
 router.get("/session", async (req, res) => {
-  res.status(501).json({
-    error:
-      "Session check not implemented. Use Supabase client on frontend for session management.",
-  });
+  try {
+    // Get access token from cookie or Authorization header
+    let token = null;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.replace("Bearer ", "");
+    } else if (req.cookies && req.cookies["sb-access-token"]) {
+      token = req.cookies["sb-access-token"];
+    }
+    if (!token) return res.status(401).json({ error: "Not authenticated" });
+    // Get user from Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: "Invalid session" });
+    // Fetch profile from 'profiles' table
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, username, email")
+      .eq("id", user.id)
+      .single();
+    if (profileError || !profile) return res.status(404).json({ error: "Profile not found" });
+    res.json({ user: profile });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

@@ -8,10 +8,13 @@ import React, { createContext, useState, useEffect, useContext } from "react";
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  // Initialize user from localStorage
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem("user");
+    return stored ? JSON.parse(stored) : null;
+  });
   const [loading, setLoading] = useState(true);
 
-  // Check session on mount
   useEffect(() => {
     const checkSession = async () => {
       setLoading(true);
@@ -21,12 +24,18 @@ export const AuthProvider = ({ children }) => {
         });
         if (res.ok) {
           const { user } = await res.json();
+          localStorage.setItem("user", JSON.stringify(user));
           setUser(user);
-        } else {
-          setUser(null);
+        } else if (res.status === 401) {
+          // Only log out if user was previously logged in (localStorage has user)
+          if (localStorage.getItem("user")) {
+            localStorage.removeItem("user");
+            setUser(null);
+          }
         }
+        // For other errors, do NOT log out
       } catch {
-        setUser(null);
+        // Network/backend error: do NOT log out
       } finally {
         setLoading(false);
       }

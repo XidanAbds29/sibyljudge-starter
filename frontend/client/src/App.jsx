@@ -12,8 +12,9 @@ import ContestListPage from "./components/ContestListPage";
 import ContestCreatePage from "./components/ContestCreatePage";
 import ContestPage from "./components/ContestPage";
 import ContestProblemPage from "./pages/ContestProblemPage";
-import Groups from "./pages/Groups";
+import GroupListPage from "./pages/GroupList";
 import GroupPage from "./pages/GroupPage";
+import GroupCreate from "./pages/GroupCreate";
 import Profile from "./pages/Profile";
 import Community from "./pages/Community";
 import DiscussionPage from "./pages/DiscussionPage";
@@ -174,7 +175,8 @@ function AppLayoutAndRoutes() {
           <Route path="/contests/create" element={<ContestCreatePage />} />
           <Route path="/contests/:contestId" element={<ContestPage />} />
           <Route path="/contests/:contestId/problem/:problemId" element={<ContestProblemPage />} />
-          <Route path="/groups" element={<Groups />} />
+          <Route path="/groups" element={<GroupListPage />} />
+          <Route path="/groups/create" element={<GroupCreate />} />
           <Route path="/group/:group_id" element={<GroupPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route
