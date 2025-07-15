@@ -45,10 +45,9 @@ router.post("/logout", (req, res) => {
 });
 
 
-// Session check: returns user profile (id, username, email) if logged in
+// Session check: returns user profile (username, institution, bio, etc. from profiles + email from auth.users) if logged in
 router.get("/session", async (req, res) => {
   try {
-    // Get access token from cookie or Authorization header
     let token = null;
     if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
       token = req.headers.authorization.replace("Bearer ", "");
@@ -56,17 +55,68 @@ router.get("/session", async (req, res) => {
       token = req.cookies["sb-access-token"];
     }
     if (!token) return res.status(401).json({ error: "Not authenticated" });
-    // Get user from Supabase
+    // Get user from Supabase Auth
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return res.status(401).json({ error: "Invalid session" });
-    // Fetch profile from 'profiles' table
+    console.log("[DEBUG] /session user.id:", user.id);
+    // Fetch profile from 'profiles' table by id
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, username, email")
+      .select("id, username, institution, bio, is_admin, created_at, updated_at")
       .eq("id", user.id)
       .single();
-    if (profileError || !profile) return res.status(404).json({ error: "Profile not found" });
-    res.json({ user: profile });
+    console.log("[DEBUG] /session profile query result:", profile, profileError);
+    if (profileError || !profile) return res.status(404).json({ error: "Profile not found for user id " + user.id });
+    // Fetch email from auth.users
+    const { data: authUser, error: authError } = await supabase
+      .from("auth.users")
+      .select("email")
+      .eq("id", user.id)
+      .single();
+    console.log("[DEBUG] /session authUser query result:", authUser, authError);
+    if (authError || !authUser) return res.status(404).json({ error: "User email not found for user id " + user.id });
+    // Combine and return
+    res.json({ user: { ...profile, email: authUser.email } });
+  } catch (err) {
+    console.error("[DEBUG] /session error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update profile info (username, institution, bio)
+router.post("/profile", async (req, res) => {
+  try {
+    let token = null;
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
+      token = req.headers.authorization.replace("Bearer ", "");
+    } else if (req.cookies && req.cookies["sb-access-token"]) {
+      token = req.cookies["sb-access-token"];
+    }
+    if (!token) return res.status(401).json({ error: "Not authenticated" });
+    // Get user from Supabase Auth
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return res.status(401).json({ error: "Invalid session" });
+    const { username, institution, bio } = req.body;
+    // Basic validation
+    if (!username || typeof username !== "string" || username.length < 2) {
+      return res.status(400).json({ error: "Invalid username" });
+    }
+    // Update profile
+    const { data: updated, error: updateError } = await supabase
+      .from("profiles")
+      .update({ username, institution, bio })
+      .eq("id", user.id)
+      .select()
+      .single();
+    if (updateError || !updated) return res.status(500).json({ error: updateError?.message || "Failed to update profile" });
+    // Fetch email from auth.users
+    const { data: authUser, error: authError } = await supabase
+      .from("auth.users")
+      .select("email")
+      .eq("id", user.id)
+      .single();
+    if (authError || !authUser) return res.status(404).json({ error: "User email not found" });
+    res.json({ ...updated, email: authUser.email });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

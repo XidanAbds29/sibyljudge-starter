@@ -16,9 +16,9 @@ import GroupListPage from "./pages/GroupList";
 import GroupPage from "./pages/GroupPage";
 import GroupCreate from "./pages/GroupCreate";
 import Profile from "./pages/Profile";
-import Community from "./pages/Community";
 import DiscussionPage from "./pages/DiscussionPage";
 import DiscussionThreadPage from "./pages/DiscussionThreadPage";
+import UpdateProfilePage from "./pages/UpdateProfilePage";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 
 // Navbar component that uses AuthContext
@@ -83,12 +83,6 @@ function Navbar() {
             className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/groups") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
           >
             Groups
-          </Link>
-          <Link
-            to="/community"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/community") ? "text-cyan-400" : "text-white hover:text-cyan-400"}`}
-          >
-            Community
           </Link>
           <Link
             to="/faq"
@@ -168,7 +162,6 @@ function AppLayoutAndRoutes() {
           <Route path="/signup" element={<AuthPage />} />
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
-          <Route path="/community" element={<Community />} />
           <Route path="/discussions" element={<DiscussionPage />} />
           <Route path="/discussions/:threadId" element={<DiscussionThreadPage />} />
           <Route path="/contests" element={<ContestListPage />} />
@@ -179,6 +172,7 @@ function AppLayoutAndRoutes() {
           <Route path="/groups/create" element={<GroupCreate />} />
           <Route path="/group/:group_id" element={<GroupPage />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/update-profile" element={<UpdateProfilePage />} />
           <Route
             path="*"
             element={

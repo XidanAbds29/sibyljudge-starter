@@ -49,7 +49,7 @@ router.get('/:group_id', async (req, res) => {
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
-        .eq('uuid', group.group_creation.created_by)
+        .eq('id', group.group_creation.created_by)
         .single();
       creator = profile?.username || null;
     }
@@ -81,7 +81,7 @@ router.get('/:group_id', async (req, res) => {
         user_id: m.user_id,
         role: m.role,
         username: m.profiles?.username || null,
-        uuid: m.profiles?.id || null,
+        id: m.profiles?.id || null,
       })),
     });
   } catch (err) {

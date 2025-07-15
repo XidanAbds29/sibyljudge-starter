@@ -19,8 +19,27 @@ export const AuthProvider = ({ children }) => {
     const checkSession = async () => {
       setLoading(true);
       try {
+        // Get Supabase access token from localStorage
+        let token = null;
+        // Find the key that ends with -auth-token
+        for (const key in localStorage) {
+          if (key.endsWith('-auth-token')) {
+            const stored = localStorage.getItem(key);
+            if (stored) {
+              try {
+                const parsed = JSON.parse(stored);
+                if (parsed.access_token) {
+                  token = parsed.access_token;
+                  break;
+                }
+              } catch {}
+            }
+          }
+        }
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch("/api/auth/session", {
           credentials: "include",
+          headers,
         });
         if (res.ok) {
           const { user } = await res.json();

@@ -180,7 +180,7 @@ export default function GroupListPage() {
       {error && (
         <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-900/50 border border-red-500/50 rounded-lg text-red-200">
           {error}
-        </div>
+          </div>
       )}
 
       <div ref={listRef} className="max-w-4xl mx-auto">
@@ -219,7 +219,7 @@ export default function GroupListPage() {
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span>ID: {group.group_id}</span>
                         <span>Created: {group.created_at ? new Date(group.created_at).toLocaleDateString() : "-"}</span>
-                      </div>
+                    </div>
                     </div>
                     <div className="flex gap-2 ml-4">
                       {isMember ? (
@@ -248,8 +248,8 @@ export default function GroupListPage() {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          )}
 
         {lastPage > 1 && (
           <div className="flex justify-center mt-8">
@@ -290,8 +290,8 @@ export default function GroupListPage() {
                   value={joinPassword}
                   onChange={e => setJoinPassword(e.target.value)}
                 />
-              </div>
-            )}
+            </div>
+          )}
             <div className="flex gap-4">
               <button
                 onClick={() => handleJoin(joiningGroup)}

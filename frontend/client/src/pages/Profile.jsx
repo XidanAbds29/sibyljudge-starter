@@ -1,158 +1,80 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useAuth } from "../components/AuthContext";
 import { useNavigate } from "react-router-dom";
+import CyberGrid from "../components/CyberGrid";
 
 const Profile = () => {
-  const { user, setUser } = useAuth();
-  const [form, setForm] = useState({
-    username: user?.username || "",
-    email: user?.email || "",
-    institute: user?.institute || "",
-    bio: user?.bio || "",
-  });
-  const [editing, setEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(null);
-  const [error, setError] = useState(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    setForm({
-      username: user?.username || "",
-      email: user?.email || "",
-      institute: user?.institute || "",
-      bio: user?.bio || "",
-    });
-  }, [user]);
+    // Optionally, you could refetch user/session here if needed
+  }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleEdit = () => setEditing(true);
-  const handleCancel = () => {
-    setEditing(false);
-    setForm({
-      username: user?.username || "",
-      email: user?.email || "",
-      institute: user?.institute || "",
-      bio: user?.bio || "",
-    });
-    setError(null);
-    setSuccess(null);
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      // Replace with your actual API endpoint
-      const res = await fetch(`/api/auth/profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error("Failed to update profile");
-      const data = await res.json();
-      setUser(data);
-      setSuccess("Profile updated!");
-      setEditing(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-950 text-cyan-400">
+        <div>Loading profile...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center font-['Orbitron',_sans-serif]">
-      <div className="w-full max-w-2xl mx-auto bg-gradient-to-br from-cyan-900/80 to-pink-900/80 rounded-3xl shadow-2xl border border-cyan-700/40 p-10 relative overflow-hidden">
-        <div className="absolute -top-10 -left-10 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute -bottom-10 -right-10 w-72 h-72 bg-pink-400/10 rounded-full blur-3xl animate-pulse" />
-        <div className="relative z-10">
-          <h1 className="text-4xl font-extrabold text-cyan-400 mb-8 tracking-wide" style={{ textShadow: "0 0 16px #00fff7, 0 0 32px #00fff7" }}>
-            Profile
-          </h1>
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col md:flex-row gap-8 items-center">
-              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 border-4 border-cyan-400 shadow-lg flex items-center justify-center text-5xl text-gray-900 font-bold select-none">
-                {form.username?.[0]?.toUpperCase() || "?"}
+    <div className="min-h-screen bg-gray-950 text-gray-200 relative flex items-center justify-center overflow-x-hidden">
+      {/* Neon grid background */}
+      <CyberGrid />
+      {/* Neon glow SVG background */}
+      <div className="fixed inset-0 z-0 animate-gradient-bg bg-gradient-to-br from-[#0f2027] via-[#2c5364] to-[#00c9ff] opacity-80 blur-2xl" />
+      <div className="absolute inset-0 -z-10 opacity-30 blur-3xl pointer-events-none">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-full w-full" viewBox="0 0 1440 320">
+          <path fill="url(#gradient1)" d="M0,128L30,133.3C60,139,120,149,180,160C240,171,300,181,360,186.7C420,192,480,192,540,186.7C600,181,660,171,720,160C780,149,840,139,900,133.3C960,128,1020,128,1080,133.3C1140,139,1200,149,1260,160C1320,171,1380,181,1410,186.7L1440,192L1440,320L1080,320C1140,320,1200,320,1260,320C1320,320,1380,320,1410,320L1440,320Z" />
+          <defs>
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00c9ff" stopOpacity="1" />
+              <stop offset="100%" stopColor="#2c5364" stopOpacity="1" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      {/* Main neon card/tab */}
+      <div className="relative z-10 w-full max-w-5xl mx-auto px-2 sm:px-8 py-16 flex flex-col items-center justify-center min-h-[80vh]">
+        <div className="relative w-full">
+          {/* Neon border and glow */}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/30 via-pink-400/20 to-sky-400/20 blur-lg opacity-60 pointer-events-none" />
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-400/30 via-pink-400/20 to-sky-400/20 blur-lg opacity-60 pointer-events-none" />
+          <div className="relative bg-gray-900/80 backdrop-blur-md border-2 border-cyan-400/40 shadow-[0_0_40px_0_rgba(34,211,238,0.15)] rounded-2xl px-6 sm:px-16 py-12 flex flex-col gap-8 items-center w-full min-h-[70vh]">
+            <div className="text-4xl font-extrabold text-cyan-400 tracking-wide mb-4 text-center bg-gradient-to-r from-cyan-300 via-pink-400 to-sky-400 bg-clip-text text-transparent animate-gradient-text drop-shadow-lg" style={{ textShadow: "0 0 16px #00fff7, 0 0 32px #00fff7" }}>
+              User Profile
+            </div>
+            <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+                <span className="block text-cyan-300 font-semibold mb-1">Username</span>
+                <span className="block text-cyan-100 text-xl font-bold">{user.username || "-"}</span>
               </div>
-              <div className="flex-1 space-y-4">
-                <div>
-                  <label className="block text-cyan-300 font-semibold mb-1">Username</label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={form.username}
-                    onChange={handleChange}
-                    disabled={!editing}
-                    className="w-full px-4 py-2 rounded-lg bg-gray-800/80 border-2 border-cyan-400 text-cyan-200 focus:outline-none focus:border-pink-400 transition shadow"
-                  />
-                </div>
-                <div>
-                  <label className="block text-cyan-300 font-semibold mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    disabled
-                    className="w-full px-4 py-2 rounded-lg bg-gray-800/80 border-2 border-cyan-400 text-cyan-200 opacity-70 cursor-not-allowed shadow"
-                  />
-                </div>
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+                <span className="block text-cyan-300 font-semibold mb-1">Email</span>
+                <span className="block text-cyan-100">{user.email}</span>
               </div>
-            </div>
-            <div>
-              <label className="block text-cyan-300 font-semibold mb-1">Institute</label>
-              <input
-                type="text"
-                name="institute"
-                value={form.institute}
-                onChange={handleChange}
-                disabled={!editing}
-                className="w-full px-4 py-2 rounded-lg bg-gray-800/80 border-2 border-cyan-400 text-cyan-200 focus:outline-none focus:border-pink-400 transition shadow"
-              />
-            </div>
-            <div>
-              <label className="block text-cyan-300 font-semibold mb-1">Bio</label>
-              <textarea
-                name="bio"
-                value={form.bio}
-                onChange={handleChange}
-                disabled={!editing}
-                rows={3}
-                className="w-full px-4 py-2 rounded-lg bg-gray-800/80 border-2 border-cyan-400 text-cyan-200 focus:outline-none focus:border-pink-400 transition shadow"
-              />
-            </div>
-            {error && <div className="text-red-400 font-bold">{error}</div>}
-            {success && <div className="text-green-400 font-bold">{success}</div>}
-            <div className="flex gap-4 mt-6">
-              {!editing ? (
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+                <span className="block text-cyan-300 font-semibold mb-1">Institution</span>
+                <span className="block text-cyan-100">{user.institution || "-"}</span>
+              </div>
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+                <span className="block text-cyan-300 font-semibold mb-1">Bio</span>
+                <span className="block text-cyan-100 whitespace-pre-line">{user.bio || "-"}</span>
+              </div>
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+                <span className="block text-cyan-300 font-semibold mb-1">Created At</span>
+                <span className="block text-cyan-100">{user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/-/g, ' ') : "-"}</span>
+              </div>
+              <div className="flex justify-center w-full mt-2">
                 <button
                   className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold py-2.5 px-8 rounded-lg shadow-lg transition hover:scale-105"
-                  onClick={handleEdit}
+                  onClick={() => navigate("/update-profile")}
                 >
-                  Edit Profile
+                  Update Profile
                 </button>
-              ) : (
-                <>
-                  <button
-                    className="bg-gradient-to-r from-cyan-500 to-pink-500 hover:from-cyan-400 hover:to-pink-400 text-white font-bold py-2.5 px-8 rounded-lg shadow-lg transition hover:scale-105"
-                    onClick={handleSave}
-                    disabled={loading}
-                  >
-                    {loading ? "Saving..." : "Save"}
-                  </button>
-                  <button
-                    className="bg-gray-700 text-cyan-300 font-bold py-2.5 px-8 rounded-lg shadow-lg transition hover:bg-gray-600"
-                    onClick={handleCancel}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                </>
-              )}
+              </div>
             </div>
           </div>
         </div>
