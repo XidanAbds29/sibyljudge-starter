@@ -185,11 +185,18 @@ export default function HomePage() {
               <p className="text-xl text-gray-300 mb-8">
                 Join SibylJudge today and become a master of algorithms!
               </p>
-              <Link to="/signup">
-                <button className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-white font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] focus:outline-none focus:ring-4 focus:ring-cyan-500/50">
-                  Sign Up for Free
-                </button>
-              </Link>
+              <div className="flex justify-center space-x-6">
+                <Link to="/signup">
+                  <button className="bg-gradient-to-r from-cyan-500 to-sky-600 hover:from-cyan-400 hover:to-sky-500 text-white font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_25px_rgba(56,189,248,0.7)] focus:outline-none focus:ring-4 focus:ring-cyan-500/50">
+                    Sign Up for Free
+                  </button>
+                </Link>
+                <Link to="/about">
+                  <button className="bg-gradient-to-r from-cyan-400 to-teal-500 hover:from-cyan-500 hover:to-teal-600 text-gray-900 font-bold py-3.5 px-10 rounded-lg shadow-lg transform transition duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(22,255,255,0.8)] focus:outline-none focus:ring-4 focus:ring-cyan-400/50">
+                    About Us
+                  </button>
+                </Link>
+              </div>
             </>
           ) : (
             <>

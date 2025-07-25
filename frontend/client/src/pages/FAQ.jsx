@@ -1,6 +1,25 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
+import { gsap } from "gsap";
 
 export default function FAQ() {
+  const heroRef = useRef();
+
+  useEffect(() => {
+    if (heroRef.current) {
+      gsap.fromTo(
+        heroRef.current,
+        { opacity: 0, y: 40, filter: "blur(10px)" },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 1.2,
+          ease: "power4.out",
+        }
+      );
+    }
+  }, []);
+
   const faqSections = [
     {
       title: "About SibylJudge",
@@ -23,8 +42,8 @@ export default function FAQ() {
           a: "Use the password reset link on the login page. Enter your username or email, and follow the instructions sent to your email."
         },
         {
-          q: "I forgot my password and did not provide a correct email during registration.",
-          a: "Contact our support team at contact@sibyljudge.com and provide evidence that you own the account."
+          q: "I forgot my password and didn't provide a correct email during registration.",
+          a: "Contact our support team at sibyljudge@gmail.com and provide evidence that you own the account."
         },
         {
           q: "Can I change my username?",
@@ -53,7 +72,7 @@ export default function FAQ() {
         },
         {
           q: "The problems I solved in a contest don't show up in my profile.",
-          a: "Solved problems will be reflected in your profile after the contest ends."
+          a: "Solved problems will be reflected in your profile after the contest ends and the system processes the results."
         }
       ]
     },
@@ -69,7 +88,7 @@ export default function FAQ() {
                 <li>The remote judge is temporarily unavailable.</li>
                 <li>Network issues between SibylJudge and the remote judge.</li>
                 <li>The remote judge has changed and SibylJudge hasn't adapted yet.</li>
-                <li>Unknown bugs.</li>
+                <li>Unknown system anomalies.</li>
               </ul>
               You can retry submission or contact support if the issue persists.
             </>
@@ -120,7 +139,7 @@ export default function FAQ() {
         },
         {
           q: "My submission is stuck in 'Waiting for Judge' (WJ) status.",
-          a: "This may be due to high server load or remote judge issues. If it persists, contact support."
+          a: "This may be due to high server load or remote judge issues. If it persists beyond normal processing time, contact support."
         }
       ]
     },
@@ -129,19 +148,19 @@ export default function FAQ() {
       items: [
         {
           q: "Where can I find more information about ratings and divisions?",
-          a: "See the 'Rules' or 'Help' section for details on rating calculation and divisions."
+          a: "See the 'Rules' or 'Help' section for details on rating calculation and divisions used by the system."
         },
         {
           q: "How can I contact support or report a bug?",
           a: (
             <>
-              Email us at <a href="mailto:contact@sibyljudge.com" className="text-cyan-400 hover:underline">contact@sibyljudge.com</a> or use the feedback form on the website.
+              Email us at <a href="mailto:sibyljudge@gmail.com" className="text-cyan-400 hover:underline">sibyljudge@gmail.com</a> or use the feedback form on the website.
             </>
           )
         },
         {
           q: "What is your copyright policy?",
-          a: "See the User Policy and Intellectual Property section for details on content usage."
+          a: "See the User Policy and Intellectual Property section for details on content usage and system guidelines."
         }
       ]
     }
@@ -155,7 +174,7 @@ export default function FAQ() {
   });
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden flex flex-col">
+    <div ref={heroRef} className="relative min-h-screen w-full overflow-x-hidden flex flex-col">
       {/* Background only for FAQ content area */}
       <div className="relative z-10 p-8 max-w-4xl mx-auto w-full flex-1">
         {/* Section background */}
@@ -178,6 +197,10 @@ export default function FAQ() {
         >
           Frequently Asked Questions
         </h1>
+
+        <p className="text-center text-gray-300 mb-8 italic">
+          <span className="text-cyan-400">"All questions will be judged by the system."</span> Find answers to common queries below.
+        </p>
 
         {/* Fancy Section Navigation - glassmorphism cards with gradient accent bar */}
         <nav className="mb-10 grid gap-10">
