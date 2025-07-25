@@ -73,6 +73,17 @@ router.get("/:problem_id", async (req, res) => {
     .eq("problem_id", problem_id)
     .single();
   if (error) return res.status(404).json({ error: error.message });
+  
+  // Parse samples JSON string into array
+  if (data.samples) {
+    try {
+      data.samples = JSON.parse(data.samples);
+    } catch (e) {
+      console.error('Error parsing samples JSON:', e);
+      data.samples = [];
+    }
+  }
+  
   res.json(data);
 });
 

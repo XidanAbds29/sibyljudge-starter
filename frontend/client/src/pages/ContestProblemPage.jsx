@@ -23,23 +23,23 @@ const TABS = [
 const LANGUAGES = [
   {
     id: "cpp",
-    name: "C++ (GCC 11)",
+    name: "C++17",
     template:
       "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Your code here\n    return 0;\n}",
     monacoLang: "cpp",
   },
   {
     id: "python",
-    name: "Python 3.10",
+    name: "Python 3.13",
     template:
-      "# Your Python solution here\n\ndef solve():\n    pass\n\nif __name__ == '__main__':\n    solve()",
+      "# Your Python solution here\n\ndef solve():\n    # Read input\n    # Process and solve\n    # Print output\n    pass\n\nif __name__ == '__main__':\n    solve()",
     monacoLang: "python",
   },
   {
     id: "java",
-    name: "Java 17",
+    name: "Java 23",
     template:
-      "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Your code here\n    }\n}",
+      "import java.util.*;\nimport java.io.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        // Your code here\n        scanner.close();\n    }\n}",
     monacoLang: "java",
   },
 ];
