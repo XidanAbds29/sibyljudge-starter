@@ -1,0 +1,285 @@
+// frontend/client/src/components/AuthContext.jsx
+import React, { createContext, useState, useEffect, useContext } from "react";
+import { supabase } from "../lib/supabaseClient";
+
+import React, { createContext, useState, useEffect, useContext } from "react";
+import { supabase } from "../lib/supabaseClient";
+
+const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Function to fetch profile data
+  const fetchProfile = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+      return null;
+    }
+  };
+
+  const clearLocalData = () => {
+    // Clear all localStorage
+    localStorage.clear();
+
+    // Clear all sessionStorage
+    sessionStorage.clear();
+
+    // Clear Supabase specific storage
+    localStorage.removeItem(
+      "sb-" + import.meta.env.VITE_SUPABASE_URL + "-auth-token"
+    );
+
+    // Remove all cookies
+    document.cookie.split(";").forEach((cookie) => {
+      document.cookie = cookie
+        .replace(/^ +/, "")
+        .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+
+    // Clear cache if supported
+    if (window.caches) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.delete(name);
+        });
+      });
+    }
+    setUser(null);
+  };
+  useEffect(() => {
+    // Get initial session and set up auth state management
+    const initializeAuth = async () => {
+      try {
+        // Check for existing session
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Auth initialization error:", error);
+          setUser(null);
+          return;
+        }
+
+        if (session?.user) {
+          try {
+            // Fetch profile data
+            const profile = await fetchProfile(session.user.id);
+
+            // Even if profile fetch fails, keep the session active
+            setUser({
+              ...session.user,
+              ...(profile || {}), // Use empty object if profile fetch fails
+              sessionExpires: session.expires_at,
+            });
+          } catch (profileError) {
+            console.error("Profile fetch error:", profileError);
+            // Don't clear session on profile error, just set basic user data
+            setUser({
+              ...session.user,
+              sessionExpires: session.expires_at,
+            });
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("Session initialization error:", e);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Set up auth state change listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.id);
+
+      if (event === "SIGNED_OUT" || !session) {
+        setUser(null);
+        return;
+      }
+
+      if (session?.user) {
+        try {
+          const profile = await fetchProfile(session.user.id);
+          setUser({
+            ...session.user,
+            ...(profile || {}), // Use empty object if profile fetch fails
+            sessionExpires: session.expires_at,
+          });
+        } catch (error) {
+          console.error("Profile fetch error during auth change:", error);
+          // Keep session active even if profile fetch fails
+          setUser({
+            ...session.user,
+            sessionExpires: session.expires_at,
+          });
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signUp = async (email, password, username) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
+        },
+      });
+
+      if (error) throw error;
+      return { user: data.user, session: data.session };
+    } catch (error) {
+      return { error: error.message };
+    }
+  };
+
+  const signIn = async (email, password) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      if (data?.session) {
+        // Store the session
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+
+        // Fetch and set user data
+        const profile = await fetchProfile(data.user.id);
+        setUser({
+          ...data.user,
+          ...(profile || {}),
+          sessionExpires: data.session.expires_at,
+        });
+      }
+
+      return { user: data.user, session: data.session };
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { error: error.message };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // Clear all local data
+      clearLocalData();
+
+      // Clear user state
+      setUser(null);
+
+      // Force reload the page to ensure clean state
+      window.location.href = "/login?clear=true";
+    } catch (error) {
+      console.error("Error signing out:", error.message);
+      // Try to clear data even if sign out fails
+      clearLocalData();
+      window.location.reload();
+    }
+  };
+
+  const updateProfile = async (updates) => {
+    try {
+      // First update the profile in the database
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // If updating username, also update the user metadata
+      if (updates.username) {
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { username: updates.username },
+        });
+
+        if (metadataError) throw metadataError;
+      }
+
+      // Update the local user state with the new data
+      setUser({ ...user, ...data });
+      return { data };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const value = { user, signUp, signIn, signOut, loading, updateProfile };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {!loading ? (
+        children
+      ) : (
+        <div className="min-h-screen flex items-center justify-center bg-gray-950 text-cyan-400">
+          <div className="flex items-center gap-3 text-xl">
+            <svg
+              className="animate-spin h-8 w-8"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              {" "}
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />{" "}
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />{" "}
+            </svg>
+            Initializing Session...
+          </div>
+        </div>
+      )}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

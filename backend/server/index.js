@@ -22,24 +22,56 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 // Debug: Log key info to help diagnose 403 errors
-console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY length:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.length : 'undefined');
-console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY starts with:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 10) : 'undefined');
-console.log("[DEBUG] SUPABASE_SERVICE_ROLE_KEY ends with:", process.env.SUPABASE_SERVICE_ROLE_KEY ? process.env.SUPABASE_SERVICE_ROLE_KEY.slice(-10) : 'undefined');
+console.log(
+  "[DEBUG] SUPABASE_SERVICE_ROLE_KEY length:",
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY.length
+    : "undefined"
+);
+console.log(
+  "[DEBUG] SUPABASE_SERVICE_ROLE_KEY starts with:",
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY.substring(0, 10)
+    : "undefined"
+);
+console.log(
+  "[DEBUG] SUPABASE_SERVICE_ROLE_KEY ends with:",
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? process.env.SUPABASE_SERVICE_ROLE_KEY.slice(-10)
+    : "undefined"
+);
 console.log("[DEBUG] supabaseUrl:", supabaseUrl);
 console.log("[DEBUG] supabaseServiceKey length:", supabaseServiceKey.length);
-console.log("[DEBUG] supabaseServiceKey starts with:", supabaseServiceKey.substring(0, 10));
-console.log("[DEBUG] supabaseServiceKey ends with:", supabaseServiceKey.slice(-10));
+console.log(
+  "[DEBUG] supabaseServiceKey starts with:",
+  supabaseServiceKey.substring(0, 10)
+);
+console.log(
+  "[DEBUG] supabaseServiceKey ends with:",
+  supabaseServiceKey.slice(-10)
+);
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Test Supabase connection at startup
 (async () => {
   try {
-    const { data, error, status } = await supabase.from("Problem").select("*").limit(1);
+    const { data, error, status } = await supabase
+      .from("Problem")
+      .select("*")
+      .limit(1);
     if (error) {
-      console.error("[DEBUG] Supabase test query error:", error, "Status:", status);
+      console.error(
+        "[DEBUG] Supabase test query error:",
+        error,
+        "Status:",
+        status
+      );
     } else {
-      console.log("[DEBUG] Supabase test query success. Data length:", data.length);
+      console.log(
+        "[DEBUG] Supabase test query success. Data length:",
+        data.length
+      );
     }
   } catch (e) {
     console.error("[DEBUG] Supabase test query threw exception:", e);

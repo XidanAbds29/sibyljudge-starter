@@ -1,86 +1,167 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); // Assumes you have a db.js for querying Postgres
+const { supabase } = require("../supabaseClient");
+const authMiddleware = require("../middleware/authMiddleware");
 
-// Get all discussion threads (global, not problem-specific)
+// Get all discussion threads
 router.get("/", async (req, res) => {
   try {
-    const threads = await db.query(
-      `SELECT t.*, u.username FROM discussion_thread t JOIN "User" u ON t.created_by = u.user_id ORDER BY t.created_at DESC`
-    );
-    res.json({ threads: threads.rows });
+    const { data, error } = await supabase
+      .from("discussion_thread")
+      .select("*, creator:profiles(username)")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch threads" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Create a new thread (global, not problem-specific)
-router.post("/", async (req, res) => {
-  const { user_id, title, content } = req.body;
-  if (!user_id || !title || !content)
-    return res.status(400).json({ error: "Missing fields" });
+// Get a specific discussion thread
+router.get("/:id", async (req, res) => {
   try {
-    // Insert thread
-    const threadResult = await db.query(
-      `INSERT INTO discussion_thread (created_by, title, created_at) VALUES ($1, $2, NOW()) RETURNING *`,
-      [user_id, title]
-    );
-    const thread = threadResult.rows[0];
-    // Insert first post as the thread content
-    const postResult = await db.query(
-      `INSERT INTO discussion_post (dissthread_id, user_id, content, posted_at) VALUES ($1, $2, $3, NOW()) RETURNING *`,
-      [thread.dissthread_id, user_id, content]
-    );
-    res.json({ thread, post: postResult.rows[0] });
+    const { data, error } = await supabase
+      .from("discussion_thread")
+      .select("*, creator:profiles(username)")
+      .eq("id", req.params.id)
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: "Discussion thread not found" });
+    }
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to create thread" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Get all posts in a thread
-router.get("/thread/:thread_id", async (req, res) => {
-  const { thread_id } = req.params;
+// Create a new discussion thread
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const posts = await db.query(
-      `SELECT p.*, u.username FROM DiscussionPost p JOIN "User" u ON p.user_id = u.user_id WHERE p.thread_id = $1 ORDER BY p.created_at ASC`,
-      [thread_id]
-    );
-    res.json({ posts: posts.rows });
+    const { title, content, type } = req.body;
+    const { data, error } = await supabase
+      .from("discussion_thread")
+      .insert([
+        {
+          title,
+          content,
+          type,
+          created_by: req.user.id,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch posts" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Add a post to a thread
-router.post("/thread/:thread_id", async (req, res) => {
-  const { thread_id } = req.params;
-  const { user_id, content } = req.body;
-  if (!user_id || !content)
-    return res.status(400).json({ error: "Missing fields" });
+// Update a discussion thread
+router.put("/:id", authMiddleware, async (req, res) => {
   try {
-    const post = await db.query(
-      `INSERT INTO DiscussionPost (thread_id, user_id, content) VALUES ($1, $2, $3) RETURNING *`,
-      [thread_id, user_id, content]
-    );
-    res.json({ post: post.rows[0] });
+    const { title, content } = req.body;
+    const { data: thread, error: threadError } = await supabase
+      .from("discussion_thread")
+      .select()
+      .eq("id", req.params.id)
+      .single();
+
+    if (threadError) throw threadError;
+    if (!thread) {
+      return res.status(404).json({ error: "Discussion thread not found" });
+    }
+    if (thread.created_by !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to update this thread" });
+    }
+
+    const { data, error } = await supabase
+      .from("discussion_thread")
+      .update({ title, content })
+      .eq("id", req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
   } catch (err) {
-    res.status(500).json({ error: "Failed to add post" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// Get a single thread by id (for thread view page)
-router.get("/:thread_id", async (req, res) => {
-  const { thread_id } = req.params;
+// Delete a discussion thread
+router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const threadResult = await db.query(
-      `SELECT t.*, u.username FROM discussion_thread t JOIN "User" u ON t.created_by = u.user_id WHERE t.dissthread_id = $1`,
-      [thread_id]
-    );
-    if (threadResult.rows.length === 0)
-      return res.status(404).json({ error: "Thread not found" });
-    res.json({ thread: threadResult.rows[0] });
+    const { data: thread, error: threadError } = await supabase
+      .from("discussion_thread")
+      .select()
+      .eq("id", req.params.id)
+      .single();
+
+    if (threadError) throw threadError;
+    if (!thread) {
+      return res.status(404).json({ error: "Discussion thread not found" });
+    }
+    if (thread.created_by !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this thread" });
+    }
+
+    const { error } = await supabase
+      .from("discussion_thread")
+      .delete()
+      .eq("id", req.params.id);
+
+    if (error) throw error;
+    res.status(204).end();
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch thread" });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all posts for a discussion thread
+router.get("/:id/posts", async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("discussion_post")
+      .select("*, author:profiles(username)")
+      .eq("thread_id", req.params.id)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a new post in a discussion thread
+router.post("/:id/posts", authMiddleware, async (req, res) => {
+  try {
+    const { content } = req.body;
+    const { data, error } = await supabase
+      .from("discussion_post")
+      .insert([
+        {
+          content,
+          thread_id: req.params.id,
+          user_id: req.user.id,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
