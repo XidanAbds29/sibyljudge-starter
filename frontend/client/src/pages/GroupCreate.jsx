@@ -178,7 +178,7 @@ export default function GroupCreate() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-0 relative overflow-hidden">
+    <div className="min-h-screen bg-gray-950 text-white p-4 sm:p-6 relative overflow-hidden">
       <div className="fixed inset-0 w-screen h-screen z-0 left-0 top-0">
         <div className="absolute inset-0 pointer-events-none z-10">
           <svg width="100vw" height="100vh" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
@@ -195,7 +195,7 @@ export default function GroupCreate() {
       </div>
       <div
         ref={containerRef}
-        className="max-w-4xl mx-auto bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-lg border border-cyan-500/20 relative z-10 min-h-screen flex flex-col justify-center"
+        className="max-w-2xl mx-auto bg-gray-900/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl shadow-lg border border-cyan-500/20 relative z-10 mt-8 mb-8"
       >
         <div className="relative">
           <NeonGlowSVG style={{ top: "-50px" }} />
