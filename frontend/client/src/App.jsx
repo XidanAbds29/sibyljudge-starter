@@ -250,6 +250,7 @@ function AppLayoutAndRoutes() {
           Crafted with futuristic ambition.
         </p>
       </footer>
+      <WebSocketStatus />
     </div>
   );
 }

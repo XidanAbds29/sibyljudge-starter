@@ -39,6 +39,7 @@ export default function ProblemList() {
   const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [difficulty, setDifficulty] = useState("");
+  const [search, setSearch] = useState("");
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState("");
   const tagDropdownRef = useRef();
@@ -61,6 +62,10 @@ export default function ProblemList() {
         page,
         difficulty,
       });
+      // Add search parameter if present
+      if (search.trim()) {
+        params.append("search", search.trim());
+      }
       // Add all selected tags as tags[]
       selectedTags.forEach((tag) => params.append("tags", tag));
       const res = await fetch(`/api/problems?${params.toString()}`);
@@ -83,11 +88,11 @@ export default function ProblemList() {
     } finally {
       setLoading(false);
     }
-  }, [judgeId, limit, page, selectedTags, difficulty]);
+  }, [judgeId, limit, page, selectedTags, difficulty, search]);
 
   useEffect(() => {
     setPage(1);
-  }, [judgeId, limit, selectedTags, difficulty]);
+  }, [judgeId, limit, selectedTags, difficulty, search]);
 
   useEffect(() => {
     fetchProblems();
@@ -148,56 +153,58 @@ export default function ProblemList() {
       ref={listRef}
       className="p-4 sm:p-6 min-h-screen bg-gray-950 text-gray-200"
     >
-        <div className="max-w-4xl mx-auto mb-6 p-4 bg-gray-900/80 backdrop-blur-sm flex flex-wrap gap-4 items-end rounded-lg shadow-xl border border-cyan-700/40">
-          {/* Filters and Refresh Button */}
-          <div>
-            <label
-              htmlFor="judgeSelect"
-              className="block mb-1 text-sm text-gray-400 font-medium"
-            >
-              Source Judge
-            </label>
-            <select
-              id="judgeSelect"
-              value={judgeId}
-              onChange={(e) => setJudgeId(e.target.value)}
-              className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-            >
-              {JUDGES.map((j) => (
-                <option key={j.id} value={j.id}>
-                  {j.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* Rating filter moved left of tags */}
-          <div>
-            <label
-              htmlFor="difficultySelect"
-              className="block mb-1 text-sm text-gray-400 font-medium"
-            >
-              Rating
-            </label>
-            <select
-              id="difficultySelect"
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value)}
-              className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
-            >
-              <option value="">All</option>
-              {DIFFICULTIES.map((d) => (
-                <option key={d} value={d}>
-                  {d || "All"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative" ref={tagDropdownRef}>
-            <label className="block mb-1 text-sm text-gray-400 font-medium">
-              Tags
-            </label>
-            <button
-              type="button"
+        <div className="max-w-4xl mx-auto mb-6 p-4 bg-gray-900/80 backdrop-blur-sm rounded-lg shadow-xl border border-cyan-700/40 space-y-4">
+          {/* Top row with filters and refresh button */}
+          <div className="flex flex-wrap gap-4 items-end">
+            {/* Filters and Refresh Button */}
+            <div>
+              <label
+                htmlFor="judgeSelect"
+                className="block mb-1 text-sm text-gray-400 font-medium"
+              >
+                Source Judge
+              </label>
+              <select
+                id="judgeSelect"
+                value={judgeId}
+                onChange={(e) => setJudgeId(e.target.value)}
+                className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+              >
+                {JUDGES.map((j) => (
+                  <option key={j.id} value={j.id}>
+                    {j.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Rating filter moved left of tags */}
+            <div>
+              <label
+                htmlFor="difficultySelect"
+                className="block mb-1 text-sm text-gray-400 font-medium"
+              >
+                Rating
+              </label>
+              <select
+                id="difficultySelect"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
+                className="p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+              >
+                <option value="">All</option>
+                {DIFFICULTIES.map((d) => (
+                  <option key={d} value={d}>
+                    {d || "All"}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative" ref={tagDropdownRef}>
+              <label className="block mb-1 text-sm text-gray-400 font-medium">
+                Tags
+              </label>
+              <button
+                type="button"
               className={`w-full min-w-[160px] flex flex-wrap items-center gap-1 px-3 py-2 bg-gray-800 text-gray-200 rounded-lg border-2 border-cyan-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200 shadow-md ${
                 tagDropdownOpen ? "ring-2 ring-cyan-400 border-cyan-400" : ""
               }`}
@@ -359,6 +366,19 @@ export default function ProblemList() {
             {loading ? "Loading…" : "Refresh List"}
           </button>
         </div>
+        
+        {/* Bottom row with search */}
+        <div>
+          <label className="block mb-1 text-sm text-gray-400 font-medium">Search Problems</label>
+          <input
+            type="text"
+            placeholder="Search by problem name..."
+            className="w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
       {/* Error Message */}
       {errorMsg && (

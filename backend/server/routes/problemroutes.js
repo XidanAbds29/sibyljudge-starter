@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-// GET /api/problems?judgeId=&limit=&page=&tags[]=&difficulty=
+// GET /api/problems?judgeId=&limit=&page=&tags[]=&difficulty=&search=
 router.get("/", async (req, res) => {
   const supabase = req.supabase;
   const judgeId = req.query.judgeId ? parseInt(req.query.judgeId) : null;
@@ -13,6 +13,7 @@ router.get("/", async (req, res) => {
   let tags = req.query.tags || [];
   if (typeof tags === "string") tags = [tags];
   const difficulty = req.query.difficulty;
+  const search = req.query.search;
 
   let query = supabase
     .from("Problem")
@@ -24,6 +25,7 @@ router.get("/", async (req, res) => {
 
   if (judgeId) query = query.eq("source_oj_id", judgeId);
   if (difficulty) query = query.eq("difficulty", difficulty);
+  if (search) query = query.ilike("title", `%${search}%`);
   // For tags, fetch problems that have ANY of the tags, then filter for ALL in JS
   if (tags.length > 0) {
     query = query.in("Problem_tag.Tag.name", tags);
