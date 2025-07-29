@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import NewPostForm from "./NewPostForm";
-// import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 import ParsedHtmlContent from "./ParsedHtmlContent";
 
 const DiscussionThread = ({ thread, onClose }) => {
@@ -11,17 +11,14 @@ const DiscussionThread = ({ thread, onClose }) => {
   useEffect(() => {
     const fetchPosts = async () => {
       setLoading(true);
-      try {
-        const res = await fetch(`/api/discussions/thread/${thread.dissthread_id}`);
-        if (!res.ok) throw new Error("Failed to fetch posts");
-        const { posts } = await res.json();
-        setPosts(posts);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+      const { data, error } = await supabase
+        .from("discussion_post")
+        .select("disspost_id, content, created_at, user_id, profiles(username)")
+        .eq("dissthread_id", thread.dissthread_id)
+        .order("created_at", { ascending: true });
+      if (error) setError(error.message);
+      else setPosts(data);
+      setLoading(false);
     };
     fetchPosts();
   }, [thread.dissthread_id]);

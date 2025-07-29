@@ -1,6 +1,12 @@
 // frontend/client/src/App.jsx
 import React, { useState } from "react";
-import { Link, Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import {
+  Link,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import ProblemList from "./components/ProblemList";
@@ -17,7 +23,10 @@ import GroupPage from "./pages/GroupPage";
 import GroupCreate from "./pages/GroupCreate";
 import Profile from "./pages/Profile";
 import DiscussionPage from "./pages/DiscussionPage";
+import NewDiscussionPage from "./pages/NewDiscussionPage";
 import DiscussionThreadPage from "./pages/DiscussionThreadPage";
+import { NotificationProvider } from "./components/NotificationContext";
+import NotificationBell from "./components/NotificationBell";
 import UpdateProfilePage from "./pages/UpdateProfilePage";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 import { WebSocketStatus } from "./components/WebSocketStatus";
@@ -37,16 +46,17 @@ function Navbar() {
   };
 
   const handleSignOut = async () => {
-    if (!signOut) {
-      console.error("SignOut function not available from AuthContext");
-      return;
-    }
-    const { error } = await signOut();
-    if (error) {
-      console.error("Error signing out:", error.message);
-      // Optionally show an error message to the user via a toast or state update
-    } else {
-      navigate("/"); // Redirect to home or login page after sign out
+    try {
+      console.log("Navbar: Starting logout process...");
+      await signOut();
+      console.log("Navbar: SignOut completed successfully");
+
+      // Note: The navigate call may not execute since signOut does a full page replace
+      navigate("/login");
+    } catch (error) {
+      console.error("Navbar: Error during logout:", error);
+      console.error("Navbar: Full error details:", error);
+      alert("There was a problem signing out. Please try again.");
     }
   };
 
@@ -63,64 +73,99 @@ function Navbar() {
         <div className="space-x-2 sm:space-x-4 flex items-center">
           <Link
             to="/"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             Home
           </Link>
           <Link
             to="/problems"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/problems") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/problems")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             Problems
           </Link>
           <Link
             to="/contests"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/contests") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/contests")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             Contests
           </Link>
           <Link
             to="/groups"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/groups") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/groups")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             Groups
           </Link>
           <Link
             to="/faq"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/faq") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/faq")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             FAQ
           </Link>
           <Link
             to="/discussions"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${isActive("/discussions") ? "text-cyan-400" : "text-gray-300 hover:text-cyan-400"}`}
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/discussions")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
           >
             Discussion
           </Link>
-
           {user ? (
             <>
-              <Link
-                to="/profile"
-                className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-cyan-700/30 rounded-full border border-cyan-700/40 shadow transition duration-300 focus:outline-none ${isActive("/profile") ? "text-cyan-400" : "text-cyan-300"}`}
-              >
-                <span className="inline-block w-7 h-7">
-                  <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-                    <circle cx="16" cy="16" r="16" fill="#0ea5e9" />
-                    <circle cx="16" cy="13" r="6" fill="#fff" />
-                    <ellipse cx="16" cy="24" rx="8" ry="5" fill="#fff" />
-                  </svg>
-                </span>
-                <span className="hidden sm:inline font-semibold text-sm">
-                  {profile?.username || user?.email?.split("@")?.[0] || "User"}
-                </span>
-              </Link>
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white font-semibold rounded-md transition duration-300 shadow hover:shadow-md ml-2"
-              >
-                Logout
-              </button>
+              <NotificationBell />
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/profile"
+                  className={`flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-cyan-700/30 rounded-full border border-cyan-700/40 shadow transition duration-300 focus:outline-none ${
+                    isActive("/profile") ? "text-cyan-400" : "text-cyan-300"
+                  }`}
+                >
+                  <span className="inline-block w-7 h-7">
+                    <svg
+                      viewBox="0 0 32 32"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-full h-full"
+                    >
+                      <circle cx="16" cy="16" r="16" fill="#0ea5e9" />
+                      <circle cx="16" cy="13" r="6" fill="#fff" />
+                      <ellipse cx="16" cy="24" rx="8" ry="5" fill="#fff" />
+                    </svg>
+                  </span>
+                  <span className="hidden sm:inline font-semibold text-sm">
+                    {profile?.username ||
+                      user?.email?.split("@")?.[0] ||
+                      "Profile"}
+                  </span>
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded-md transition duration-300 shadow hover:shadow-md"
+                >
+                  Logout
+                </button>
+              </div>
             </>
           ) : (
             <>
@@ -153,6 +198,7 @@ function AppLayoutAndRoutes() {
       <ScrollToTop /> {/* ScrollToTop component to handle scroll restoration */}
       {/* Navbar is placed at the top of the layout */}
       <Navbar />
+      <WebSocketStatus />
       {/* Increased padding-top to ensure content is below the navbar */}
       <main className="pt-20 sm:pt-24 container mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
         <Routes>
@@ -164,11 +210,15 @@ function AppLayoutAndRoutes() {
           <Route path="/about" element={<About />} />
           <Route path="/faq" element={<FAQ />} />
           <Route path="/discussions" element={<DiscussionPage />} />
-          <Route path="/discussions/:threadId" element={<DiscussionThreadPage />} />
+          <Route path="/discussions/new" element={<NewDiscussionPage />} />
+          <Route path="/discussions/:id" element={<DiscussionThreadPage />} />
           <Route path="/contests" element={<ContestListPage />} />
           <Route path="/contests/create" element={<ContestCreatePage />} />
           <Route path="/contests/:contestId" element={<ContestPage />} />
-          <Route path="/contests/:contestId/problem/:problemId" element={<ContestProblemPage />} />
+          <Route
+            path="/contests/:contestId/problem/:problemId"
+            element={<ContestProblemPage />}
+          />
           <Route path="/groups" element={<GroupListPage />} />
           <Route path="/groups/create" element={<GroupCreate />} />
           <Route path="/group/:group_id" element={<GroupPage />} />
@@ -209,11 +259,30 @@ function AppLayoutAndRoutes() {
 
 // Main App component that provides AuthContext
 export default function App() {
+  React.useEffect(() => {
+    // Initialize realtime connection when the app starts
+    const initRealtime = async () => {
+      try {
+        const { connectToRealtime } = await import("./lib/supabaseClient");
+        const channel = connectToRealtime();
+
+        // Cleanup on unmount
+        return () => {
+          channel?.unsubscribe();
+        };
+      } catch (error) {
+        console.error("Failed to initialize realtime:", error);
+      }
+    };
+
+    initRealtime();
+  }, []);
+
   return (
     <AuthProvider>
-      {" "}
-      {/* AuthProvider wraps the content that needs auth context */}
-      <AppLayoutAndRoutes />
+      <NotificationProvider>
+        <AppLayoutAndRoutes />
+      </NotificationProvider>
     </AuthProvider>
   );
 }

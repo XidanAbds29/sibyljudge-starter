@@ -28,6 +28,8 @@
     "axios-cookiejar-support": "^6.0.2",
     "html-react-parser": "^5.2.5",
     "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
     "tough-cookie": "^5.1.2"
   }
 }
