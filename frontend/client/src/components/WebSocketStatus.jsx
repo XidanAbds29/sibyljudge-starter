@@ -8,9 +8,21 @@ export function WebSocketStatus() {
 
   useEffect(() => {
     let channel;
+    let timeoutId;
 
     const initChannel = async () => {
       try {
+        console.log("Initializing WebSocket channel...");
+        
+        // Set a timeout to detect if initialization takes too long
+        timeoutId = setTimeout(() => {
+          if (status === "initializing") {
+            setStatus("error");
+            setLastError("Connection timeout");
+            setReconnectCount((prev) => prev + 1);
+          }
+        }, 10000); // 10 seconds timeout
+
         // Create a status monitoring channel
         channel = supabase.channel("status_monitor", {
           config: {
@@ -22,8 +34,11 @@ export function WebSocketStatus() {
 
         channel.subscribe(async (status) => {
           console.log("Channel status:", status);
+          clearTimeout(timeoutId);
+          
           if (status === "SUBSCRIBED") {
             setStatus("connected");
+            setLastError(null);
           } else if (status === "CLOSED") {
             setStatus("disconnected");
             setReconnectCount((prev) => prev + 1);
@@ -35,6 +50,7 @@ export function WebSocketStatus() {
         });
       } catch (error) {
         console.error("Error initializing status channel:", error);
+        clearTimeout(timeoutId);
         setStatus("error");
         setLastError(error.message || "Failed to initialize channel");
       }
@@ -44,6 +60,7 @@ export function WebSocketStatus() {
 
     // Cleanup function
     return () => {
+      clearTimeout(timeoutId);
       if (channel) {
         channel.unsubscribe();
       }
