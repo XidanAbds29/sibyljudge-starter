@@ -10,15 +10,33 @@ function validateFields(obj, fields) {
   return null;
 }
 
-// List all groups (ordered by creation time desc)
+// List all groups (ordered by creation time desc) with pagination and filters
 router.get('/', async (req, res) => {
   const supabase = req.supabase;
+  const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+  const page = req.query.page ? parseInt(req.query.page) : 1;
+  const search = req.query.search;
+  const privacy = req.query.privacy; // "Public" or "Private"
+  
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  
   try {
-    let query = supabase.from('group').select('*').order('created_at', { ascending: false });
-    if (req.query.onlyPublic === 'true') {
+    let query = supabase.from('group').select('*', { count: 'exact' }).order('created_at', { ascending: false }).range(from, to);
+    
+    // Apply privacy filter
+    if (privacy === 'Public') {
       query = query.eq('is_private', false);
+    } else if (privacy === 'Private') {
+      query = query.eq('is_private', true);
     }
-    const { data: groups, error } = await query;
+    
+    // Apply search filter
+    if (search) {
+      query = query.ilike('name', `%${search}%`);
+    }
+    
+    const { data: groups, error, count } = await query;
     if (error) {
       console.error('[GroupList] DB error:', error);
       return res.status(500).json({ error: error.message });
@@ -60,7 +78,7 @@ router.get('/', async (req, res) => {
       }
     }));
 
-    res.json(groupsWithCreators);
+    res.json({ groups: groupsWithCreators, total: count });
   } catch (err) {
     console.error('[GroupList] Route error:', err);
     res.status(500).json({ error: err.message });

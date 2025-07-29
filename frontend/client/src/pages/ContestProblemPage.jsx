@@ -16,14 +16,15 @@ const TABS = [
   "Input",
   "Output",
   "Examples",
-  "Submissions",
+  "Submit",
+  "My Submissions",
   "Test Runner",
 ];
 
 const LANGUAGES = [
   {
     id: "cpp",
-    name: "C++17",
+    name: "GNU G++14 (C++17)",
     template:
       "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // Your code here\n    return 0;\n}",
     monacoLang: "cpp",
@@ -149,20 +150,23 @@ function renderHtmlWithMath(html) {
 }
 
 export default function ContestProblemPage() {
+  // Get problem ID from URL parameters
   const { contestId, problemId } = useParams();
+  const navigate = useNavigate(); // For programmatic navigation
+  // Get user and Supabase client from AuthContext
   const { user: authUser, supabase: supabaseFromAuth } = useAuth();
-  const mainRef = useRef(null);
-  const [problem, setProblem] = useState(null);
-  const [activeTab, setActiveTab] = useState("Statement");
-  const [samplesFromProblem, setSamplesFromProblem] = useState([]);
-  const [submitOpen, setSubmitOpen] = useState(false);
-  const [language, setLanguage] = useState(LANGUAGES[0].id);
-  const [code, setCode] = useState(LANGUAGES[0].template);
-  const [file, setFile] = useState(null);
-  const [showVerdict, setShowVerdict] = useState(false);
-  const [verdict, setVerdict] = useState(null);
-  const [loadingProblem, setLoadingProblem] = useState(true);
-  const [errorProblem, setErrorProblem] = useState("");
+  const mainRef = useRef(null); // Ref for the main container for GSAP animations
+  const [problem, setProblem] = useState(null); // Stores problem details fetched from API
+  const [activeTab, setActiveTab] = useState("Statement"); // Controls which tab content is displayed
+  const [samplesFromProblem, setSamplesFromProblem] = useState([]); // Stores sample inputs/outputs
+  const [submitOpen, setSubmitOpen] = useState(false); // Controls visibility of submission modal/area
+  const [language, setLanguage] = useState(LANGUAGES[0].id); // Currently selected programming language
+  const [code, setCode] = useState(LANGUAGES[0].template); // Code in the editor, initialized with template
+  const [file, setFile] = useState(null); // Stores uploaded file if user chooses to upload
+  const [showVerdict, setShowVerdict] = useState(false); // Controls visibility of submission verdict animation
+  const [verdict, setVerdict] = useState(null); // Stores submission verdict data (status, message)
+  const [loadingProblem, setLoadingProblem] = useState(true); // Loading state for problem details
+  const [errorProblem, setErrorProblem] = useState(""); // Error message for problem fetching
 
   useEffect(() => {
     if (typeof window.gsap !== "undefined") {
@@ -221,17 +225,8 @@ export default function ContestProblemPage() {
       setLoadingProblem(true);
       setErrorProblem("");
       try {
-        let url = `/api/contests/${contestId}/problem/${problemId}`;
-        if (authUser && authUser.id) {
-          url += `?user_id=${encodeURIComponent(authUser.id)}`;
-        }
-        const res = await fetch(url, { credentials: 'include' });
-        if (res.status === 401) {
-          setErrorProblem("You must be logged in to view this contest problem (during contest). After the contest ends, anyone can view.");
-          setProblem(null);
-          setLoadingProblem(false);
-          return;
-        }
+        // Fetch from regular problems API endpoint (same as ProblemPage)
+        const res = await fetch(`/api/problems/${problemId}`);
         if (!res.ok) {
           const errorText = await res.text();
           throw new Error(
@@ -242,7 +237,16 @@ export default function ContestProblemPage() {
         setProblem(problemData);
         // --- Sample Extraction Logic ---
         let samples = [];
-        if (
+        
+        // 1. First check if backend provides parsed samples array (from our scraper)
+        if (Array.isArray(problemData.samples) && problemData.samples.length > 0) {
+          samples = problemData.samples.map((s) => ({
+            input: s.input || "",
+            output: s.output || "",
+          }));
+        }
+        // 2. If backend provides sample_tests as array (fallback)
+        else if (
           Array.isArray(problemData.sample_tests) &&
           problemData.sample_tests.length > 0
         ) {
@@ -251,6 +255,7 @@ export default function ContestProblemPage() {
             output: s.output || s.sample_output || "",
           }));
         } else if (problemData.sample_input && problemData.sample_output) {
+          // 3. If backend provides single sample_input/sample_output
           samples = [
             {
               input: problemData.sample_input,
@@ -258,30 +263,69 @@ export default function ContestProblemPage() {
             },
           ];
         } else if (problemData.statement_html) {
+          // 4. Try to extract from statement_html (Codeforces style) - fallback only
           try {
-            const parser = new window.DOMParser();
-            const doc = parser.parseFromString(problemData.statement_html, "text/html");
-            const inputs = doc.querySelectorAll(".input pre");
-            const outputs = doc.querySelectorAll(".output pre");
-            for (let i = 0; i < Math.max(inputs.length, outputs.length); i++) {
-              let input = inputs[i]?.innerHTML || "";
-              let output = outputs[i]?.innerHTML || "";
-              input = input.replace(/<br\s*\/?>(\n)?/gi, "\n");
-              output = output.replace(/<br\s*\/?>(\n)?/gi, "\n");
-              input = input.replace(/&nbsp;/gi, " ");
-              output = output.replace(/&nbsp;/gi, " ");
-              input = input.replace(/<[^>]+>/g, "");
-              output = output.replace(/<[^>]+>/g, "");
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(
+              problemData.statement_html,
+              "text/html"
+            );
+            const sampleTests = doc.querySelectorAll(
+              ".sample-tests .sample-test"
+            );
+            if (sampleTests.length > 0) {
               const decode = (str) => {
                 const txt = document.createElement('textarea');
                 txt.innerHTML = str;
                 return txt.value;
               };
-              input = decode(input);
-              output = decode(output);
-              samples.push({ input, output });
+              samples = Array.from(sampleTests).map((sampleDiv) => {
+                let input = sampleDiv.querySelector("div.input pre")?.innerHTML || "";
+                let output = sampleDiv.querySelector("div.output pre")?.innerHTML || "";
+                // Convert <br> to newlines
+                input = input.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                output = output.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                input = decode(input);
+                output = decode(output);
+                // Remove any remaining HTML tags
+                input = input.replace(/<[^>]+>/g, "");
+                output = output.replace(/<[^>]+>/g, "");
+                return { input, output };
+              });
+            } else {
+              // Fallback: try to find all <div class="input"><pre>...</pre></div> and <div class="output"><pre>...</pre></div>
+              const inputs = doc.querySelectorAll(".input pre");
+              const outputs = doc.querySelectorAll(".output pre");
+              for (
+                let i = 0;
+                i < Math.max(inputs.length, outputs.length);
+                i++
+              ) {
+                let input = inputs[i]?.innerHTML || "";
+                let output = outputs[i]?.innerHTML || "";
+                // Replace <br> and <br/> with real newlines
+                input = input.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                output = output.replace(/<br\s*\/?>(\n)?/gi, "\n");
+                // Replace &nbsp; with space
+                input = input.replace(/&nbsp;/gi, " ");
+                output = output.replace(/&nbsp;/gi, " ");
+                // Remove all other HTML tags (but keep newlines)
+                input = input.replace(/<[^>]+>/g, "");
+                output = output.replace(/<[^>]+>/g, "");
+                // Decode HTML entities (after tag removal)
+                const decode = (str) => {
+                  const txt = document.createElement('textarea');
+                  txt.innerHTML = str;
+                  return txt.value;
+                };
+                input = decode(input);
+                output = decode(output);
+                samples.push({ input, output });
+              }
             }
-          } catch (e) {}
+          } catch (e) {
+            // Ignore extraction errors
+          }
         }
         setSamplesFromProblem(samples.filter((s) => s.input || s.output));
         // --- End Sample Extraction ---
@@ -294,7 +338,7 @@ export default function ContestProblemPage() {
       }
     };
     fetchProblemDetails();
-  }, [contestId, problemId, authUser]);
+  }, [problemId]); // Re-run when problemId changes
 
   const onFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -311,6 +355,117 @@ export default function ContestProblemPage() {
     if (!file) {
       setCode(currentLangTemplate || "");
     }
+  };
+
+  // Handler for submitting code (contest version)
+  const handleSubmit = async () => {
+    // Check if user is logged in
+    if (!authUser || !authUser.id) {
+      setVerdict({
+        status: "Error",
+        message: "Please log in to submit solutions."
+      });
+      setShowVerdict(true);
+      setTimeout(() => setShowVerdict(false), 4000);
+      return;
+    }
+
+    // Prepare source code (from textarea or uploaded file)
+    let sourceCode = code;
+    if (file) {
+      try {
+        sourceCode = await file.text();
+      } catch (e) {
+        setVerdict({
+          status: "Error",
+          message: "Failed to read uploaded file."
+        });
+        setShowVerdict(true);
+        setTimeout(() => setShowVerdict(false), 4000);
+        setSubmitOpen(false);
+        setFile(null);
+        return;
+      }
+    }
+    
+    // Prepare payload with all required data including contest context
+    const payload = {
+      source_code: sourceCode,
+      language,
+      problem_id: problem.problem_id,
+      user_id: authUser.id,
+      contest_id: contestId, // Include contest context
+      time_limit: problem.time_limit || DEFAULT_TIME_LIMIT_MS,
+      memory_limit: problem.mem_limit || DEFAULT_MEMORY_LIMIT_KB,
+      sample_input: samplesFromProblem.length > 0 ? samplesFromProblem[0].input : "",
+      sample_output: samplesFromProblem.length > 0 ? samplesFromProblem[0].output : "",
+      all_samples: samplesFromProblem // Send all samples for comprehensive testing
+    };
+
+    try {
+      // Step 1: Submit to regular submissions endpoint
+      const submissionRes = await fetch(`/api/submissions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!submissionRes.ok) {
+        const errorText = await submissionRes.text();
+        throw new Error(errorText || `Submission failed: ${submissionRes.status}`);
+      }
+      
+      const submissionResult = await submissionRes.json();
+      
+      // Step 2: Link submission to contest
+      if (submissionResult.submissionId) {
+        const contestLinkRes = await fetch(`/api/contest-submissions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            submission_id: submissionResult.submissionId,
+            contest_id: contestId,
+            problem_id: problem.problem_id
+          })
+        });
+        
+        if (!contestLinkRes.ok) {
+          console.error("Failed to link submission to contest, but submission was saved");
+          // Don't fail the entire submission - just log the error
+        }
+      }
+      
+      // Map verdict codes to user-friendly names
+      const verdictNames = {
+        "AC": "Accepted",
+        "WA": "Wrong Answer", 
+        "TLE": "Time Limit Exceeded",
+        "MLE": "Memory Limit Exceeded",
+        "RE": "Runtime Error",
+        "CE": "Compilation Error"
+      };
+      
+      setVerdict({
+        status: verdictNames[submissionResult.verdict] || submissionResult.verdict || "Unknown",
+        message: submissionResult.message,
+        testResults: submissionResult.testResults || [],
+        submissionId: submissionResult.submissionId
+      });
+    } catch (err) {
+      setVerdict({
+        status: "Error",
+        message: err.message || "Submission failed. Please try again."
+      });
+    }
+    
+    setShowVerdict(true);
+    setTimeout(() => setShowVerdict(false), 6000);
+    setSubmitOpen(false);
+    setFile(null);
   };
 
   // Render loading state
@@ -526,6 +681,239 @@ export default function ContestProblemPage() {
                       )}
                     </div>
                   )}
+                  {activeTab === "Submit" && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="space-y-6"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-cyan-400 flex items-center gap-2">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+                            />
+                          </svg>
+                          Submit Solution
+                        </h2>
+                      </div>
+
+                      {/* Language Selection */}
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="language-select" className="block text-base font-semibold text-cyan-200">
+                          Select Language
+                        </label>
+                        <select
+                          id="language-select"
+                          value={language}
+                          onChange={handleLanguageChange}
+                          className="w-1/2 p-3 bg-gray-800 border-2 border-cyan-700 rounded-lg text-cyan-100 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 shadow-sm transition-colors duration-200 cursor-pointer appearance-none"
+                        >
+                          {LANGUAGES.map((lang) => (
+                            <option key={lang.id} value={lang.id}>
+                              {lang.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Source Code Editor */}
+                      <div className="relative group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-600 to-sky-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" />
+                        <div className="relative">
+                          <label htmlFor="solution-box" className="block text-base font-semibold text-cyan-200 mb-3">
+                            Source Code
+                          </label>
+                          <textarea
+                            id="solution-box"
+                            value={code}
+                            onChange={(e) => setCode(e.target.value)}
+                            disabled={!!file}
+                            className="w-full h-80 p-4 bg-gray-900 text-cyan-100 font-mono text-sm resize-none rounded-xl border-2 border-cyan-700/60 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            placeholder={file ? "File selected - code will be read from file" : "Write your solution here..."}
+                          />
+                        </div>
+                      </div>
+
+                      {/* File Upload Option */}
+                      <div className="relative group">
+                        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-indigo-500 opacity-10 group-hover:opacity-20 transition duration-300 rounded-lg blur-sm" />
+                        <div className="relative">
+                          <label htmlFor="submit-file-upload" className="block text-base font-semibold text-purple-200 mb-3">
+                            Upload Code File (Optional)
+                          </label>
+                          <div className="flex items-center gap-4">
+                            <input
+                              type="file"
+                              id="submit-file-upload"
+                              onChange={onFileChange}
+                              accept=".cpp,.py,.java"
+                              className="block text-sm text-purple-100 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-500 cursor-pointer bg-gray-700 border-2 border-purple-700 rounded-md shadow-sm transition-colors duration-200"
+                            />
+                            {file && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-purple-200 text-sm">
+                                  Selected: {file.name}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setFile(null);
+                                    setCode(LANGUAGES.find((l) => l.id === language)?.template || "");
+                                  }}
+                                  className="text-pink-400 hover:text-pink-300 text-sm font-medium"
+                                >
+                                  (Clear)
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          {file && (
+                            <p className="text-xs text-gray-400 mt-2">
+                              File content will be used instead of the code editor above.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <motion.button
+                        onClick={handleSubmit}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="w-full px-6 py-4 rounded-lg font-semibold text-white bg-gradient-to-r from-cyan-500 via-pink-400 to-sky-400 hover:from-cyan-400 hover:to-pink-300 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 text-lg"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-7.586 7.586A.5.5 0 009.172 14L2.5 7.328l1.414-1.414 5.758 5.758.707-.707L13.586 3.586z" />
+                        </svg>
+                        Submit Solution
+                      </motion.button>
+
+                      {/* Help Text */}
+                      <div className="text-sm text-gray-400 bg-gray-800/30 rounded-lg p-4 border border-gray-700/50">
+                        <p className="flex items-center gap-2 mb-2">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4 text-cyan-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                          <strong>How to submit:</strong>
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 ml-6">
+                          <li>Select your programming language</li>
+                          <li>Write your solution in the code editor OR upload a code file</li>
+                          <li>Click "Submit Solution" to test against all sample cases</li>
+                          <li>Your submission will be saved and evaluated automatically</li>
+                          <li>Check "My Submissions" tab to view your submission history</li>
+                          <li>Supported file types: .cpp, .c, .py, .java, .js, .ts, .txt</li>
+                          <li>Login required for submissions</li>
+                        </ul>
+                      </div>
+
+                      <AnimatePresence>
+                        {showVerdict && verdict && (
+                          <div className="fixed top-8 right-8 z-50 max-w-md">
+                            <div className={`px-6 py-4 rounded-xl shadow-lg border-2 text-lg font-bold flex flex-col gap-2 items-start ${verdict.status === "Accepted" ? "bg-green-900/90 border-green-400 text-green-200" : verdict.status === "Wrong Answer" ? "bg-pink-900/90 border-pink-400 text-pink-200" : verdict.status === "Compilation Error" ? "bg-yellow-900/90 border-yellow-400 text-yellow-200" : verdict.status === "Time Limit Exceeded" ? "bg-orange-900/90 border-orange-400 text-orange-200" : verdict.status === "Memory Limit Exceeded" ? "bg-purple-900/90 border-purple-400 text-purple-200" : "bg-red-900/90 border-red-400 text-red-200"}`}>
+                              <span className="text-xl font-extrabold">{verdict.status}</span>
+                              <span>{verdict.message}</span>
+                              
+                              {/* Test Results Display */}
+                              {Array.isArray(verdict.testResults) && verdict.testResults.length > 0 && (
+                                <div className="mt-3 text-sm max-h-64 overflow-y-auto w-full">
+                                  <div className="font-semibold mb-2 text-cyan-200">Test Results:</div>
+                                  {verdict.testResults.map((test, idx) => (
+                                    <div key={idx} className="mb-3 p-2 bg-black/30 rounded border border-gray-600">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-bold">Test {test.testCase}</span>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                          test.verdict === "AC" ? "bg-green-700 text-green-200" :
+                                          test.verdict === "WA" ? "bg-pink-700 text-pink-200" :
+                                          test.verdict === "TLE" ? "bg-orange-700 text-orange-200" :
+                                          test.verdict === "MLE" ? "bg-purple-700 text-purple-200" :
+                                          test.verdict === "RE" ? "bg-red-700 text-red-200" :
+                                          "bg-yellow-700 text-yellow-200"
+                                        }`}>
+                                          {test.verdict}
+                                        </span>
+                                      </div>
+                                      
+                                      {(test.executionTime || test.memoryUsed) && (
+                                        <div className="text-gray-300 text-xs mb-1 space-x-2">
+                                          {test.executionTime && <span>Time: {test.executionTime}ms</span>}
+                                          {test.memoryUsed && <span>Memory: {test.memoryUsed}KB</span>}
+                                        </div>
+                                      )}
+                                      
+                                      <div className="space-y-1 text-xs">
+                                        <div>
+                                          <span className="text-cyan-300 font-semibold">Input:</span>
+                                          <pre className="font-mono text-gray-200 whitespace-pre-wrap mt-1 p-1 bg-gray-800 rounded">{test.input || "(empty)"}</pre>
+                                        </div>
+                                        <div>
+                                          <span className="text-green-300 font-semibold">Expected:</span>
+                                          <pre className="font-mono text-gray-200 whitespace-pre-wrap mt-1 p-1 bg-gray-800 rounded">{test.expectedOutput || "(empty)"}</pre>
+                                        </div>
+                                        <div>
+                                          <span className="text-yellow-300 font-semibold">Your Output:</span>
+                                          <pre className="font-mono text-gray-200 whitespace-pre-wrap mt-1 p-1 bg-gray-800 rounded">{test.actualOutput || "(empty)"}</pre>
+                                        </div>
+                                        
+                                        {test.error && (
+                                          <div>
+                                            <span className="text-red-300 font-semibold">Error:</span>
+                                            <pre className="font-mono text-red-200 whitespace-pre-wrap mt-1 p-1 bg-red-900/30 rounded">{test.error}</pre>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                  
+                  {activeTab === "My Submissions" && (
+                    problem.problem_id && authUser ? (
+                      <SubmissionHistory 
+                        problemId={problem.problem_id} 
+                        contestId={contestId}
+                        supabase={supabaseFromAuth} 
+                        currentUser={authUser} 
+                      />
+                    ) : (
+                      <div className="text-center text-gray-400 py-4">
+                        {authUser ? "Loading your contest submissions..." : "Log in to view your submissions."}
+                      </div>
+                    )
+                  )}
+                  
                   {activeTab === "Submissions" && (
                     problem.problem_id && authUser ? (
                       <SubmissionHistory problemId={problem.problem_id} supabase={supabaseFromAuth} currentUser={authUser} />
@@ -544,6 +932,16 @@ export default function ContestProblemPage() {
           </div>
         </div>
       </div>
+      
+      {/* Verdict Animation */}
+      <AnimatePresence>
+        {showVerdict && verdict && (
+          <StatusAnimation
+            verdict={verdict}
+            onClose={() => setShowVerdict(false)}
+          />
+        )}
+      </AnimatePresence>
     </ErrorBoundary>
   );
 }

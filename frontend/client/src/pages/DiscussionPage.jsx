@@ -39,7 +39,7 @@ export default function DiscussionPage() {
     setError(null);
 
     try {
-      const query = supabase
+      let query = supabase
         .from("discussion_thread")
         .select(
           `

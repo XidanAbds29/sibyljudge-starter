@@ -1,15 +1,47 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useAuth } from "../components/AuthContext";
 import { useNavigate } from "react-router-dom";
 import CyberGrid from "../components/CyberGrid";
+import { gsap } from "gsap";
 
 const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const profileRef = useRef(null);
 
   useEffect(() => {
     // Optionally, you could refetch user/session here if needed
   }, []);
+
+  useEffect(() => {
+    if (profileRef.current && user) {
+      gsap.fromTo(
+        profileRef.current,
+        { opacity: 0, y: 40, filter: "blur(10px)" },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 1.1,
+          ease: "power4.out",
+        }
+      );
+      const items = profileRef.current.querySelectorAll(".profile-card-animate");
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 30, scale: 0.97 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: "power3.out",
+          delay: 0.2,
+        }
+      );
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -46,24 +78,24 @@ const Profile = () => {
             <div className="text-4xl font-extrabold text-cyan-400 tracking-wide mb-4 text-center bg-gradient-to-r from-cyan-300 via-pink-400 to-sky-400 bg-clip-text text-transparent animate-gradient-text drop-shadow-lg" style={{ textShadow: "0 0 16px #00fff7, 0 0 32px #00fff7" }}>
               User Profile
             </div>
-            <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
-              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+            <div className="flex flex-col gap-6 w-full max-w-2xl mx-auto" ref={profileRef}>
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6 profile-card-animate">
                 <span className="block text-cyan-300 font-semibold mb-1">Username</span>
                 <span className="block text-cyan-100 text-xl font-bold">{user.username || "-"}</span>
               </div>
-              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6 profile-card-animate">
                 <span className="block text-cyan-300 font-semibold mb-1">Email</span>
                 <span className="block text-cyan-100">{user.email}</span>
               </div>
-              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6 profile-card-animate">
                 <span className="block text-cyan-300 font-semibold mb-1">Institution</span>
                 <span className="block text-cyan-100">{user.institution || "-"}</span>
               </div>
-              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6 profile-card-animate">
                 <span className="block text-cyan-300 font-semibold mb-1">Bio</span>
                 <span className="block text-cyan-100 whitespace-pre-line">{user.bio || "-"}</span>
               </div>
-              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6">
+              <div className="bg-gray-900/80 rounded-lg shadow-xl border border-cyan-700/40 p-6 profile-card-animate">
                 <span className="block text-cyan-300 font-semibold mb-1">Created At</span>
                 <span className="block text-cyan-100">{user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/-/g, ' ') : "-"}</span>
               </div>

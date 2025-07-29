@@ -48,6 +48,7 @@ export default function GroupListPage() {
   const [status, setStatus] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [joinPassword, setJoinPassword] = useState("");
   const [joiningGroup, setJoiningGroup] = useState(null);
@@ -67,10 +68,23 @@ export default function GroupListPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("/api/groups");
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: limit.toString(),
+        });
+        
+        if (privacy) {
+          params.append('privacy', privacy);
+        }
+        if (search) {
+          params.append('search', search);
+        }
+        
+        const res = await fetch(`/api/groups?${params}`);
         if (!res.ok) throw new Error("Failed to fetch groups");
         const data = await res.json();
-        setGroups(data);
+        setGroups(data.groups);
+        setTotal(data.total);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -79,7 +93,7 @@ export default function GroupListPage() {
     };
     fetchGroups();
     // eslint-disable-next-line
-  }, [refreshKey]);
+  }, [refreshKey, page, privacy, search]);
 
   useEffect(() => {
     if (user) {
@@ -109,8 +123,22 @@ export default function GroupListPage() {
           ease: "power4.out",
         }
       );
+      const items = listRef.current.querySelectorAll(".group-card-animate");
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 30, scale: 0.97 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: "power3.out",
+          delay: 0.2,
+        }
+      );
     }
-  }, [groups, page, privacy, status, search]);
+  }, [groups]);
 
   async function handleJoin(group) {
     if (!user) return alert("Login required");
@@ -203,15 +231,20 @@ export default function GroupListPage() {
     }
   }
 
-  // Filter and paginate groups
+  // Filter by status (membership) on client-side since we need myGroups data
+  // Only apply status filter if myGroups has been loaded (to avoid showing empty state while loading)
   const filteredGroups = groups.filter((g) => {
-    const matchesPrivacy = !privacy || (privacy === "Public" && !g.is_private) || (privacy === "Private" && g.is_private);
-    const matchesStatus = !status || (status === "Member" ? myGroups.some(mg => mg.group_id === g.group_id) : !myGroups.some(mg => mg.group_id === g.group_id));
-    const matchesSearch = !search || g.name.toLowerCase().includes(search.toLowerCase());
-    return matchesPrivacy && matchesStatus && matchesSearch;
+    if (!status || myGroups.length === 0) return true; // Show all if no status filter or myGroups not loaded yet
+    
+    if (status === "Member") {
+      return myGroups.some(mg => mg.group_id === g.group_id);
+    } else if (status === "Not Member") {
+      return !myGroups.some(mg => mg.group_id === g.group_id);
+    }
+    return true; // No status filter
   });
-  const lastPage = Math.max(1, Math.ceil(filteredGroups.length / limit));
-  const paginatedGroups = filteredGroups.slice((page - 1) * limit, page * limit);
+  
+  const lastPage = Math.max(1, Math.ceil(total / limit));
 
   return (
     <div className="p-4 sm:p-6 min-h-screen bg-gray-950 text-gray-200 font-['Orbitron',_sans-serif] antialiased">
@@ -259,10 +292,10 @@ export default function GroupListPage() {
         
         {/* Bottom row with search */}
         <div>
-          <label className="block mb-1 text-sm text-gray-400 font-medium">Search</label>
+          <label className="block mb-1 text-sm text-gray-400 font-medium">Search Groups</label>
           <input
             type="text"
-            placeholder="Search groups..."
+            placeholder="Search by group name..."
             className="w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
@@ -288,20 +321,18 @@ export default function GroupListPage() {
             <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-cyan-400"></div>
             <p className="mt-4 text-gray-400">Loading groups...</p>
           </div>
-        ) : paginatedGroups.length === 0 ? (
+        ) : filteredGroups.length === 0 ? (
           <p className="text-center text-gray-400 py-10 text-lg">
-            {filteredGroups.length > 0 && page > 1
-              ? "No groups on this page."
-              : "No groups found matching your criteria."}
+            No groups found matching your criteria.
           </p>
         ) : (
           <div className="divide-y divide-gray-700/70">
-            {paginatedGroups.map((group) => {
+            {filteredGroups.map((group) => {
               const isMember = myGroups.some(mg => mg.group_id === group.group_id);
               return (
                 <div
                   key={group.group_id}
-                  className="py-5 group relative transition-all duration-300 hover:scale-[1.025] hover:z-10"
+                  className="py-5 group group-card-animate relative transition-all duration-300 hover:scale-[1.025] hover:z-10"
                 >
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-80 transition-all duration-300 z-0">
                     <NeonGlowSVG
@@ -326,9 +357,6 @@ export default function GroupListPage() {
                           {isMember ? "Member" : "Not Member"}
                         </span>
                       </div>
-                      {group.description && (
-                        <p className="text-gray-400 mb-2.5">{group.description}</p>
-                      )}
                       <div className="flex flex-wrap gap-2 items-center text-xs">
                         <span className="px-2.5 py-1 font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
                           ID: {group.group_id}
@@ -372,7 +400,7 @@ export default function GroupListPage() {
           </div>
         )}
 
-        {lastPage > 1 && (
+        {total > 0 && (
           <div className="mt-8 flex justify-between items-center pt-4 border-t border-gray-700/70">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}

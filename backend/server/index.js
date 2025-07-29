@@ -13,7 +13,8 @@ const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseServiceKey = (
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_SERVICE_KEY ||
-  process.env.PUBLIC_SUPABASE_ANON_KEY
+  process.env.PUBLIC_SUPABASE_ANON_KEY ||
+  ""
 ).trim();
 if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error(
@@ -91,6 +92,8 @@ const problemRoutes = require("./routes/problemroutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
+const contestSubmissionRoutes = require("./routes/contestSubmissionRoutes");
+const standingsRoutes = require("./routes/standingsRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const discussionRoutes = require("./routes/DiscussionRoutes");
 
@@ -135,6 +138,22 @@ app.use(
     next();
   },
   contestRoutes
+);
+app.use(
+  "/api/contest-submissions",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  contestSubmissionRoutes
+);
+app.use(
+  "/api/standings",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  standingsRoutes
 );
 app.use(
   "/api/groups",

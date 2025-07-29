@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function SubmissionHistory({
   problemId,
+  contestId = null, // Optional contest ID for filtering contest submissions
   supabase,
   currentUser,
 }) {
@@ -24,9 +25,15 @@ export default function SubmissionHistory({
         setLoading(true);
         setError("");
         
-        const response = await fetch(
-          `/api/submissions/user/${currentUser.id}/problem/${problemId}`
-        );
+        // Use different endpoint for contest submissions vs regular submissions
+        let url;
+        if (contestId) {
+          url = `/api/contest-submissions/${contestId}/problem/${problemId}/user/${currentUser.id}`;
+        } else {
+          url = `/api/submissions/user/${currentUser.id}/problem/${problemId}`;
+        }
+        
+        const response = await fetch(url);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch submissions: ${response.status}`);
@@ -43,7 +50,7 @@ export default function SubmissionHistory({
     };
 
     fetchSubmissions();
-  }, [currentUser?.id, problemId]);
+  }, [currentUser?.id, problemId, contestId]);
 
   // Format date for display
   const formatDate = (dateString) => {

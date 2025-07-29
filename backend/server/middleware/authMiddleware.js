@@ -1,21 +1,37 @@
-const jwt = require("jsonwebtoken");
+const { createClient } = require("@supabase/supabase-js");
 
-// Ensure this matches your JWT_SECRET in authRoutes.js
-const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
-const COOKIE_NAME = "token"; // Ensure this matches your COOKIE_NAME in authRoutes.js
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = (
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.PUBLIC_SUPABASE_ANON_KEY
+).trim();
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const authenticateToken = (req, res, next) => {
-  const token = req.cookies[COOKIE_NAME];
-  if (!token) {
+const authenticateToken = async (req, res, next) => {
+  // Try to get token from Authorization header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res
       .status(401)
       .json({ error: "Authentication required: No token provided" });
   }
-
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  
   try {
-    const user = jwt.verify(token, JWT_SECRET);
-    req.user = user; // Attach user payload (user_id, email) to the request
-    next(); // Proceed to the next route handler
+    // Verify the token with Supabase
+    const { data: user, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res
+        .status(403)
+        .json({ error: "Authentication failed: Invalid token" });
+    }
+    
+    // Attach user info to request
+    req.user = { user_id: user.user.id, email: user.user.email };
+    next();
   } catch (err) {
     return res
       .status(403)
