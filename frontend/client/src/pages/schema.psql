@@ -95,21 +95,23 @@ create table public.discussion_post (
   user_id uuid not null,
   content text null,
   posted_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  likes integer null default 0,
   constraint discussion_post_pkey primary key (disspost_id),
   constraint discussion_post_dissthread_id_fkey foreign KEY (dissthread_id) references discussion_thread (dissthread_id),
   constraint discussion_post_user_id_fkey foreign KEY (user_id) references profiles (id)
 ) TABLESPACE pg_default;
 
-create table public.discussion_thread (
-  dissthread_id serial not null,
-  created_by uuid not null,
-  title character varying(200) not null,
-  thread_type character varying(50) null,
-  reference_id integer null,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint discussion_thread_pkey primary key (dissthread_id),
-  constraint discussion_thread_created_by_fkey foreign KEY (created_by) references profiles (id)
+create table public.discussion_like (
+  like_id serial not null,
+  post_id integer null,
+  user_id uuid null,
+  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint discussion_like_pkey primary key (like_id),
+  constraint discussion_like_post_id_user_id_key unique (post_id, user_id),
+  constraint discussion_like_post_id_fkey foreign KEY (post_id) references discussion_post (disspost_id) on delete CASCADE,
+  constraint discussion_like_user_id_fkey foreign KEY (user_id) references profiles (id) on delete CASCADE
 ) TABLESPACE pg_default;
+
 
 create table public.discussion_thread (
   dissthread_id serial not null,
@@ -118,9 +120,24 @@ create table public.discussion_thread (
   thread_type character varying(50) null,
   reference_id integer null,
   created_at timestamp without time zone null default CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  view_count integer null default 0,
   constraint discussion_thread_pkey primary key (dissthread_id),
   constraint discussion_thread_created_by_fkey foreign KEY (created_by) references profiles (id)
 ) TABLESPACE pg_default;
+
+create table public.discussion_view (
+  view_id serial not null,
+  thread_id integer null,
+  user_id uuid null,
+  last_viewed_at timestamp with time zone null default CURRENT_TIMESTAMP,
+  constraint discussion_view_pkey primary key (view_id),
+  constraint discussion_view_thread_id_user_id_key unique (thread_id, user_id),
+  constraint discussion_view_thread_id_fkey foreign KEY (thread_id) references discussion_thread (dissthread_id) on delete CASCADE,
+  constraint discussion_view_user_id_fkey foreign KEY (user_id) references profiles (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+
 
 create table public.fav_prob (
   fav_prob_id serial not null,
@@ -318,3 +335,5 @@ create table public.user_track_progress (
   constraint user_track_progress_track_id_fkey foreign KEY (track_id) references track (track_id),
   constraint user_track_progress_user_id_fkey foreign KEY (user_id) references profiles (id)
 ) TABLESPACE pg_default;
+
+

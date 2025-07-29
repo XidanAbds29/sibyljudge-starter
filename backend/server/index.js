@@ -3,9 +3,30 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const app = express();
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+// Configure CORS
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:3000"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Parse JSON payloads
 app.use(express.json());
+
+// Parse cookies
 app.use(cookieParser());
+
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error("[ERROR]", err);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+  });
+});
 
 // ─── Supabase Client ────────────────────────────
 const { createClient } = require("@supabase/supabase-js");
@@ -92,7 +113,7 @@ const submissionRoutes = require("./routes/submissionRoutes");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const groupRoutes = require("./routes/groupRoutes");
-const discussionRoutes = require("./routes/DiscussionRoutes");
+const discussionRoutes = require("./routes/discussionRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use(
@@ -127,7 +148,14 @@ app.use(
   },
   syncRoutes
 );
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  authRoutes
+);
 app.use(
   "/api/contests",
   (req, res, next) => {

@@ -36,33 +36,33 @@ export const AuthProvider = ({ children }) => {
     let mounted = true;
 
     const handleAuthChange = async (event, currentSession) => {
-      console.log(`Auth state changed: ${event}`, currentSession?.user?.email);
-      console.log("Current session details:", currentSession);
-
       if (!mounted) return;
 
       try {
         switch (event) {
-          case "INITIAL_SESSION":
           case "SIGNED_IN":
-          case "TOKEN_REFRESHED":
             if (currentSession?.user) {
-              console.log("Fetching profile for user:", currentSession.user.id);
               const profile = await fetchProfile(currentSession.user.id);
-              console.log("Profile fetch result:", profile);
-
               if (!mounted) return;
 
-              // Update states atomically
               const userData = {
                 ...currentSession.user,
                 ...(profile || {}),
                 sessionExpires: currentSession.expires_at,
               };
 
+              localStorage.setItem("sb-access-token", currentSession.access_token);
+              localStorage.setItem("sb-user-data", JSON.stringify(userData));
+              
               setSession(currentSession);
               setUser(userData);
               setLoading(false);
+
+              // Store the access token
+              localStorage.setItem(
+                "sb-access-token",
+                currentSession.access_token
+              );
 
               // Store user data in localStorage for persistence
               localStorage.setItem("sb-user-data", JSON.stringify(userData));
@@ -109,41 +109,49 @@ export const AuthProvider = ({ children }) => {
     // Initialize auth state
     const initAuth = async () => {
       try {
-        console.log("Checking initial session...");
-
-        // Try to get cached user data first
-        const cachedUserData = localStorage.getItem("sb-user-data");
-        if (cachedUserData) {
-          const parsedUserData = JSON.parse(cachedUserData);
-          setUser(parsedUserData);
-        }
-
         const {
           data: { session },
           error,
         } = await supabase.auth.getSession();
 
         if (error) throw error;
-
         if (!mounted) return;
 
-        console.log(
-          "Initial session:",
-          session ? `Found (${session.user.email})` : "None"
-        );
+        if (session?.user) {
+          const profile = await fetchProfile(session.user.id);
+          if (!mounted) return;
+
+          const userData = {
+            ...session.user,
+            ...(profile || {}),
+            sessionExpires: session.expires_at,
+          };
+
+          localStorage.setItem("sb-access-token", session.access_token);
+          localStorage.setItem("sb-user-data", JSON.stringify(userData));
+
+          setSession(session);
+          setUser(userData);
+        }
 
         if (session?.user) {
           try {
             const profile = await fetchProfile(session.user.id);
             if (!mounted) return;
 
+            // Store access token first
+            localStorage.setItem("sb-access-token", session.access_token);
+            
             const userData = {
               ...session.user,
               ...(profile || {}),
               sessionExpires: session.expires_at,
             };
 
-            setSession(session);
+            setSession({
+              ...session,
+              access_token: session.access_token,
+            });
             setUser(userData);
             localStorage.setItem("sb-user-data", JSON.stringify(userData));
 
@@ -211,7 +219,6 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     try {
-      console.log("Attempting to sign in...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -220,21 +227,22 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
 
       if (data?.session) {
-        console.log("Sign in successful, session obtained");
+        localStorage.setItem("sb-access-token", data.session.access_token);
+        
+        const profile = await fetchProfile(data.user.id);
+        const userData = {
+          ...data.user,
+          ...(profile || {}),
+          sessionExpires: data.session.expires_at,
+        };
 
-        try {
-          // Fetch profile immediately after successful sign in
-          console.log("Fetching user profile after sign in");
-          const profile = await fetchProfile(data.user.id);
-          console.log("Profile fetch successful:", profile);
+        localStorage.setItem("sb-user-data", JSON.stringify(userData));
+        
+        setSession(data.session);
+        setUser(userData);
 
-          // Update states synchronously
-          setSession(data.session);
-          setUser({
-            ...data.user,
-            ...(profile || {}),
-            sessionExpires: data.session.expires_at,
-          });
+        // Use more reliable navigation
+        window.location.href = "/";
 
           // Force the page to navigate to home after successful login
           if (window.location.pathname === "/login") {

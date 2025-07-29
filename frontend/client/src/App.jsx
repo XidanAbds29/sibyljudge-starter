@@ -29,7 +29,6 @@ import { NotificationProvider } from "./components/NotificationContext";
 import NotificationBell from "./components/NotificationBell";
 import UpdateProfilePage from "./pages/UpdateProfilePage";
 import { AuthProvider, useAuth } from "./components/AuthContext";
-import { WebSocketStatus } from "./components/WebSocketStatus";
 
 // Navbar component that uses AuthContext
 
@@ -198,7 +197,6 @@ function AppLayoutAndRoutes() {
       <ScrollToTop /> {/* ScrollToTop component to handle scroll restoration */}
       {/* Navbar is placed at the top of the layout */}
       <Navbar />
-      <WebSocketStatus />
       {/* Increased padding-top to ensure content is below the navbar */}
       <main className="pt-20 sm:pt-24 container mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
         <Routes>
@@ -258,25 +256,6 @@ function AppLayoutAndRoutes() {
 
 // Main App component that provides AuthContext
 export default function App() {
-  React.useEffect(() => {
-    // Initialize realtime connection when the app starts
-    const initRealtime = async () => {
-      try {
-        const { connectToRealtime } = await import("./lib/supabaseClient");
-        const channel = connectToRealtime();
-
-        // Cleanup on unmount
-        return () => {
-          channel?.unsubscribe();
-        };
-      } catch (error) {
-        console.error("Failed to initialize realtime:", error);
-      }
-    };
-
-    initRealtime();
-  }, []);
-
   return (
     <AuthProvider>
       <NotificationProvider>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../components/AuthContext";
+import { discussionService } from "../services/discussionService";
 import { format } from "date-fns";
 import MDEditor from "@uiw/react-md-editor";
 
@@ -18,127 +18,48 @@ export default function DiscussionThreadPage() {
   const [editMode, setEditMode] = useState(null);
   const [editContent, setEditContent] = useState("");
 
+  const handleDeleteThread = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this discussion? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await discussionService.deleteThread(id);
+      navigate("/discussions");
+    } catch (err) {
+      console.error("Error deleting thread:", err);
+      setError("Failed to delete discussion");
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    let channel;
 
-    const setupRealtimeSubscription = async () => {
-      try {
-        // Unsubscribe from any existing channel
-        if (channel) {
-          channel.unsubscribe();
-          supabase.removeChannel(channel);
-        }
+    // Initial fetch
+    fetchThreadData();
 
-        // Create new channel with specific channel config
-        channel = supabase.channel(`thread-${id}`, {
-          config: {
-            broadcast: { self: true },
-            presence: { key: user?.id || "anonymous" },
-          },
-        });
-
-        // Set up subscription with error handling
-        channel
-          .on("system", { event: "disconnect" }, () => {
-            console.log("Disconnected from realtime");
-            if (mounted) {
-              setTimeout(() => setupRealtimeSubscription(), 5000);
-            }
-          })
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "discussion_post",
-              filter: `dissthread_id=eq.${id}`,
-            },
-            async () => {
-              if (!mounted) return;
-              try {
-                await fetchThreadData();
-              } catch (error) {
-                console.error("Error fetching thread data:", error);
-              }
-            }
-          );
-
-        const status = await channel.subscribe(async (status, err) => {
-          if (status === "SUBSCRIBED" && mounted) {
-            console.log("Connected to realtime");
-            await fetchThreadData();
-          }
-          if (status === "CHANNEL_ERROR") {
-            console.error("Channel error:", err);
-            if (mounted) {
-              setTimeout(() => setupRealtimeSubscription(), 5000);
-            }
-          }
-          if (err) {
-            console.error("Subscription error:", err);
-          }
-        });
-      } catch (err) {
-        console.error("Error setting up realtime subscription:", err);
+    // Set up polling interval (every 10 seconds)
+    const interval = setInterval(() => {
+      if (mounted) {
+        fetchThreadData();
       }
-    };
+    }, 10000);
 
-    setupRealtimeSubscription();
     return () => {
       mounted = false;
-      if (channel) {
-        channel.unsubscribe();
-        supabase.removeChannel(channel);
-      }
+      clearInterval(interval);
     };
   }, [id]);
 
   const fetchThreadData = async () => {
     try {
-      // Fetch thread details
-      const { data: threadData, error: threadError } = await supabase
-        .from("discussion_thread")
-        .select(
-          `
-          *,
-          creator:created_by(
-            id,
-            username,
-            institution
-          ),
-          problem:reference_id(
-            title,
-            external_id
-          )
-        `
-        )
-        .eq("dissthread_id", id)
-        .single();
-
-      if (threadError) throw threadError;
-      if (!threadData) throw new Error("Thread not found");
-
-      // Fetch posts
-      const { data: postsData, error: postsError } = await supabase
-        .from("discussion_post")
-        .select(
-          `
-          *,
-          author:user_id(
-            id,
-            username,
-            institution
-          )
-        `
-        )
-        .eq("dissthread_id", id)
-        .order("created_at", { ascending: true });
-
-      if (postsError) throw postsError;
-
-      setThread(threadData);
-      setPosts(postsData || []);
+      const data = await discussionService.getThread(id);
+      setThread(data);
+      setPosts(data.posts || []);
       setError(null);
     } catch (err) {
       console.error("Error fetching thread:", err);
@@ -161,15 +82,9 @@ export default function DiscussionThreadPage() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("discussion_post").insert([
-        {
-          dissthread_id: id,
-          user_id: user.id,
-          content: replyContent.trim(),
-        },
-      ]);
-
-      if (error) throw error;
+      await discussionService.createPost(id, {
+        content: replyContent.trim(),
+      });
 
       setReplyContent("");
       setError(null);
@@ -190,13 +105,9 @@ export default function DiscussionThreadPage() {
 
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from("discussion_post")
-        .update({ content: editContent.trim() })
-        .eq("disspost_id", postId)
-        .eq("user_id", user.id); // Ensure user owns the post
-
-      if (error) throw error;
+      await discussionService.updatePost(postId, {
+        content: editContent.trim(),
+      });
 
       setEditMode(null);
       setEditContent("");
@@ -214,14 +125,7 @@ export default function DiscussionThreadPage() {
     if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
-      const { error } = await supabase
-        .from("discussion_post")
-        .delete()
-        .eq("disspost_id", postId)
-        .eq("user_id", user.id); // Ensure user owns the post
-
-      if (error) throw error;
-
+      await discussionService.deletePost(postId);
       await fetchThreadData();
     } catch (err) {
       console.error("Error deleting post:", err);
@@ -255,10 +159,26 @@ export default function DiscussionThreadPage() {
     <div className="max-w-4xl mx-auto px-4">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center justify-between mb-4">
           <Link to="/discussions" className="text-cyan-400 hover:text-cyan-300">
             ← Back to Discussions
           </Link>
+          {user?.id === thread.created_by && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => navigate(`/discussions/${id}/edit`)}
+                className="text-cyan-400 hover:text-cyan-300 text-sm"
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDeleteThread}
+                className="text-red-400 hover:text-red-300 text-sm"
+              >
+                Delete
+              </button>
+            </div>
+          )}
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">{thread.title}</h1>
         <div className="text-sm text-gray-400">
@@ -298,7 +218,7 @@ export default function DiscussionThreadPage() {
                     {post.author?.username || "Unknown"}
                   </div>
                   <div className="text-sm text-gray-400">
-                    {format(new Date(post.created_at), "MMM d, yyyy, HH:mm")}
+                    {format(new Date(post.posted_at), "MMM d, yyyy, HH:mm")}
                   </div>
                 </div>
               </div>

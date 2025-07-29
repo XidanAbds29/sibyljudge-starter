@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../components/AuthContext";
 import { format } from "date-fns";
+import { discussionService } from "../services/discussionService";
 
 export default function DiscussionPage() {
   const { user } = useAuth();
@@ -14,7 +14,6 @@ export default function DiscussionPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [filters, setFilters] = useState({
     type: searchParams.get("type") || "all",
     problem: searchParams.get("problem") || "",
@@ -39,84 +38,42 @@ export default function DiscussionPage() {
     setError(null);
 
     try {
-      const query = supabase
-        .from("discussion_thread")
-        .select(
-          `
-          *,
-          creator:created_by(
-            id,
-            username
-          ),
-          posts:discussion_post(count)
-        `,
-          { count: "exact" }
-        )
-        .order("created_at", { ascending: false });
+      const { threads, total, page, totalPages } =
+        await discussionService.getThreads({
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          type: filters.type,
+          tab: activeTab,
+          userId: activeTab === "my" ? user?.id : undefined,
+          sort: "latest",
+        });
 
-      // Apply basic filters
-      if (filters.type !== "all") {
-        query = query.eq("thread_type", filters.type);
-      }
-
-      // Handle tabs
-      if (activeTab === "my" && user?.id) {
-        query = query.eq("created_by", user.id);
-      } else if (activeTab === "unanswered") {
-        query = query.eq("posts.count", 0);
-      }
-
-      // Add pagination
-      const from = (currentPage - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      query = query.range(from, to);
-
-      const { data, error: queryError, count } = await query;
-
-      if (queryError) throw queryError;
-
-      setThreads(data || []);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      setThreads(threads || []);
+      setTotalPages(totalPages);
       setError(null);
     } catch (err) {
       console.error("Error fetching threads:", err);
-      setError("Failed to load discussions");
+      setError(
+        err.cause?.details || err.message || "Failed to load discussions"
+      );
       setThreads([]);
     } finally {
       setLoading(false);
     }
   }, [activeTab, currentPage, filters, user?.id, ITEMS_PER_PAGE]);
 
-  // Effect for fetching threads when filters/page change
+  // Effect for fetching threads and setting up polling
   useEffect(() => {
+    // Initial fetch
     fetchThreads();
-  }, [fetchThreads]);
 
-  // Effect for realtime subscription
-  useEffect(() => {
-    const channel = supabase.channel("realtime-discussions");
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "discussion_thread",
-        },
-        () => {
-          console.log("Received discussion update");
-          fetchThreads();
-        }
-      )
-      .subscribe((status) => {
-        console.log("Channel status:", status);
-        setIsSubscribed(status === "SUBSCRIBED");
-      });
-    return () => {
-      console.log("Cleaning up subscription");
-      setIsSubscribed(false);
-      channel.unsubscribe();
-    };
+    // Set up polling interval (every 10 seconds)
+    const interval = setInterval(() => {
+      fetchThreads();
+    }, 10000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(interval);
   }, [fetchThreads]);
 
   const handleTabChange = (tab) => {
@@ -238,13 +195,20 @@ export default function DiscussionPage() {
                     {thread.title}
                   </h3>
                   <div className="text-sm text-gray-400">
-                    Started by {thread.creator?.username || "Unknown"} •{" "}
+                    Started by {thread.profiles?.username || "Unknown"} •{" "}
                     {format(new Date(thread.created_at), "MMM d, yyyy")} •{" "}
-                    {thread.posts.count} replies
+                    {thread.posts?.length || 0} replies
                   </div>
                 </div>
-                <div className="text-sm text-gray-400">
-                  {thread.thread_type}
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-gray-400">
+                    {thread.thread_type || "General"}
+                  </div>
+                  {thread.reference_id && (
+                    <span className="px-2 py-1 text-xs bg-cyan-900/50 text-cyan-300 rounded-full">
+                      Ref #{thread.reference_id}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

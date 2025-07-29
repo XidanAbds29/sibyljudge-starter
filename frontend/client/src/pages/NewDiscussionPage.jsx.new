@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
 import { discussionService } from "../services/discussionService";
-import MDEditor from "@uiw/react-md-editor";
+import MDEditor from '@uiw/react-md-editor';
 
 export default function NewDiscussionPage() {
   const navigate = useNavigate();
@@ -12,14 +12,14 @@ export default function NewDiscussionPage() {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    type: "general",
+    type: "general"
   });
 
   const threadTypes = [
     { value: "general", label: "General Discussion" },
     { value: "problem", label: "Problem Discussion" },
     { value: "contest", label: "Contest Discussion" },
-    { value: "group", label: "Group Discussion" },
+    { value: "group", label: "Group Discussion" }
   ];
 
   const handleSubmit = async (e) => {
@@ -47,10 +47,10 @@ export default function NewDiscussionPage() {
       const thread = await discussionService.createThread({
         title: formData.title.trim(),
         content: formData.content.trim(),
-        thread_type: formData.type,
+        thread_type: formData.type
       });
-
-      navigate("/discussions/" + thread.dissthread_id);
+      
+      navigate('/discussions/' + thread.dissthread_id);
     } catch (err) {
       setError(err.message || "An error occurred. Please try again.");
     } finally {
@@ -65,7 +65,10 @@ export default function NewDiscussionPage() {
           <p className="text-gray-400 mb-4">
             Please sign in to create a discussion.
           </p>
-          <Link to="/login" className="text-cyan-500 hover:text-cyan-400">
+          <Link 
+            to="/login" 
+            className="text-cyan-500 hover:text-cyan-400"
+          >
             Go to Login
           </Link>
         </div>
@@ -76,7 +79,10 @@ export default function NewDiscussionPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-6">
-        <Link to="/discussions" className="text-cyan-500 hover:text-cyan-400">
+        <Link 
+          to="/discussions" 
+          className="text-cyan-500 hover:text-cyan-400"
+        >
           ← Back to Discussions
         </Link>
       </div>
@@ -97,9 +103,7 @@ export default function NewDiscussionPage() {
           <input
             type="text"
             value={formData.title}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, title: e.target.value }))
-            }
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
             className="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2"
             placeholder="Enter discussion title"
             required
@@ -112,9 +116,7 @@ export default function NewDiscussionPage() {
           </label>
           <select
             value={formData.type}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, type: e.target.value }))
-            }
+            onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
             className="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2"
           >
             {threadTypes.map((t) => (
@@ -131,13 +133,11 @@ export default function NewDiscussionPage() {
           </label>
           <MDEditor
             value={formData.content}
-            onChange={(value) =>
-              setFormData((prev) => ({ ...prev, content: value || "" }))
-            }
+            onChange={(value) => setFormData(prev => ({ ...prev, content: value || "" }))}
             className="min-h-[200px]"
             preview="edit"
             previewOptions={{
-              className: "prose prose-invert max-w-none",
+              className: "prose prose-invert max-w-none"
             }}
           />
         </div>
