@@ -20,6 +20,7 @@ import DiscussionPage from "./pages/DiscussionPage";
 import DiscussionThreadPage from "./pages/DiscussionThreadPage";
 import UpdateProfilePage from "./pages/UpdateProfilePage";
 import { AuthProvider, useAuth } from "./components/AuthContext";
+import { WebSocketStatus } from "./components/WebSocketStatus";
 
 // Navbar component that uses AuthContext
 
@@ -201,6 +202,7 @@ function AppLayoutAndRoutes() {
           Crafted with futuristic ambition.
         </p>
       </footer>
+      <WebSocketStatus />
     </div>
   );
 }
