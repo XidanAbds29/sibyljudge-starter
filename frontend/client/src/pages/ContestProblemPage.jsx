@@ -90,11 +90,17 @@ function extractSpecificSection(fullHtml, classSelector, headingTextRegexString 
 // Replace renderHtmlWithMath with the full version from ProblemPage
 function renderHtmlWithMath(html) {
   if (!html) return null;
+  
   // Regexes for math
   const blockMathRegex = /\${3}([\s\S]+?)\${3}/g; // $$$...$$$
   const inlineMathRegex = /\${2}([\s\S]+?)\${2}/g; // $$...$$
   const singleMathRegex = /\$([^$\n]+?)\$/g; // $...$
+  
+  // Additional regex for LaTeX expressions that might not be wrapped
+  const latexPatternRegex = /\\[a-zA-Z]+(?:\{[^}]*\}|\[[^\]]*\])*|\\[a-zA-Z]+(?:_\{[^}]*\}|\^\{[^}]*\}|_[a-zA-Z0-9]|\^[a-zA-Z0-9])*|[a-zA-Z0-9]*_\{[^}]*\}|[a-zA-Z0-9]*\^\{[^}]*\}/g;
+
   function parseMath(text) {
+    // First handle explicit math delimiters
     // Replace $$$...$$$ (always as inline math)
     let elements = [];
     let lastIndex = 0;
@@ -110,6 +116,7 @@ function renderHtmlWithMath(html) {
     if (lastIndex < text.length) {
       elements.push(text.slice(lastIndex));
     }
+    
     // Now handle $$...$$ and $...$ as inline math in each part
     elements = elements.flatMap((part, i) => {
       if (typeof part !== 'string') return [part];
@@ -117,18 +124,21 @@ function renderHtmlWithMath(html) {
       let subparts = [];
       let last = 0;
       let m;
+      inlineMathRegex.lastIndex = 0; // Reset regex
       while ((m = inlineMathRegex.exec(part))) {
         if (m.index > last) subparts.push(part.slice(last, m.index));
         subparts.push(<InlineMath key={i + '-d-' + m.index}>{m[1]}</InlineMath>);
         last = inlineMathRegex.lastIndex;
       }
       if (last < part.length) subparts.push(part.slice(last));
+      
       // Now $...$
       return subparts.flatMap((sp, j) => {
         if (typeof sp !== 'string') return [sp];
         let sps = [];
         let l = 0;
         let sm;
+        singleMathRegex.lastIndex = 0; // Reset regex
         while ((sm = singleMathRegex.exec(sp))) {
           if (sm.index > l) sps.push(sp.slice(l, sm.index));
           sps.push(<InlineMath key={i + '-s-' + j + '-' + sm.index}>{sm[1]}</InlineMath>);
@@ -138,8 +148,40 @@ function renderHtmlWithMath(html) {
         return sps;
       });
     });
+
+    // Finally, handle unwrapped LaTeX expressions (like \min, \gcd, etc.)
+    elements = elements.flatMap((element, i) => {
+      if (typeof element !== 'string') return [element];
+      
+      // Look for LaTeX patterns and wrap them
+      let parts = [];
+      let lastIdx = 0;
+      let latexMatch;
+      latexPatternRegex.lastIndex = 0; // Reset regex
+      
+      while ((latexMatch = latexPatternRegex.exec(element))) {
+        // Add text before the LaTeX
+        if (latexMatch.index > lastIdx) {
+          parts.push(element.slice(lastIdx, latexMatch.index));
+        }
+        
+        // Add the LaTeX as math
+        const latexContent = latexMatch[0];
+        parts.push(<InlineMath key={i + '-latex-' + latexMatch.index}>{latexContent}</InlineMath>);
+        lastIdx = latexPatternRegex.lastIndex;
+      }
+      
+      // Add remaining text
+      if (lastIdx < element.length) {
+        parts.push(element.slice(lastIdx));
+      }
+      
+      return parts.length > 0 ? parts : [element];
+    });
+    
     return elements;
   }
+  
   return parse(html, {
     replace: (domNode) => {
       if (domNode.type === 'text') {

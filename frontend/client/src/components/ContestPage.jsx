@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { supabase } from "../lib/supabaseClient";
 import { gsap } from "gsap";
 import { motion, AnimatePresence } from "framer-motion";
 import Standings from "./Standings";
 import ContestTimer from "./ContestTimer";
+import ContestStatus from "./ContestStatus";
 
 const NeonGlowSVG = ({ className = "", style = {}, ...props }) => (
   <svg
@@ -147,7 +149,7 @@ const ContestPage = () => {
     return "finished";
   };
 
-  // Check if user can access restricted tabs (Problems, My submissions, Status, Standings)
+  // Check if user can access restricted tabs (Problems, My submissions, All submissions, Standings)
   const canAccessRestrictedTabs = () => {
     const contestState = getContestState();
     return user && contest?.is_participant && (contestState === "ongoing" || contestState === "finished");
@@ -158,7 +160,7 @@ const ContestPage = () => {
     const baseTabs = ["Description"];
     
     if (canAccessRestrictedTabs()) {
-      return ["Problems", "My submissions", "Status", "Standings", "Description"];
+      return ["Problems", "My submissions", "All submissions", "Standings", "Description"];
     }
     
     return baseTabs;
@@ -711,21 +713,66 @@ const ContestPage = () => {
                       Problems in {contest.name}
                     </h2>
                     {canAccessRestrictedTabs() && contest.problems?.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="divide-y divide-gray-700/70">
                         {contest.problems.map((p, i) => (
                           <div
                             key={i}
-                            className="flex justify-between items-center p-6 bg-gray-900/60 border border-cyan-600/30 backdrop-blur-sm rounded-xl hover:bg-gray-800/70 transition-all duration-300 hover:shadow-[0_0_20px_0_rgba(34,211,238,0.3)]"
+                            className="py-5 group problem-card-animate relative transition-all duration-300 hover:scale-[1.025] hover:z-10"
                           >
-                            <span className="text-cyan-100 text-lg font-medium">
-                              Problem {i + 1}: {p.title || p.alias || p.problem_id}
-                            </span>
-                            <a
-                              href={`/contests/${contestId}/problem/${p.problem_id}`}
-                              className="px-6 py-3 bg-gradient-to-r from-cyan-500 via-pink-500 to-sky-500 text-white font-semibold rounded-lg shadow-lg hover:shadow-[0_0_20px_0_rgba(34,211,238,0.6)] transition-all duration-300 hover:scale-105 hover:-translate-y-0.5"
-                            >
-                              Open Problem
-                            </a>
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-80 transition-all duration-300 z-0">
+                              <div className="w-full h-full rounded-xl bg-gradient-to-r from-cyan-400/20 via-sky-500/10 to-pink-400/20 blur-lg" />
+                            </div>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between relative z-10">
+                              <div className="flex-1 min-w-0 mb-3 sm:mb-0">
+                                <a
+                                  href={`/contests/${contestId}/problem/${p.problem_id}`}
+                                  className="text-xl font-semibold text-cyan-400 hover:text-sky-300 transition-colors duration-300 block group-hover:tracking-wide"
+                                  title={p.title || p.alias || `Problem ${i + 1}`}
+                                >
+                                  Problem {i + 1}: {p.title || p.alias || p.problem_id}
+                                </a>
+                                <div className="mt-2.5 flex flex-wrap gap-2 items-center">
+                                  {p.source_name && (
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
+                                      {p.source_name}
+                                    </span>
+                                  )}
+                                  {p.difficulty && (
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-pink-700/30 text-pink-300 rounded-full border border-pink-600/50">
+                                      Rating: {p.difficulty}
+                                    </span>
+                                  )}
+                                  {p.time_limit && (
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
+                                      Time: {p.time_limit / 1000}s
+                                    </span>
+                                  )}
+                                  {p.mem_limit && (
+                                    <span className="px-2.5 py-1 text-xs font-medium bg-gray-800 text-gray-300 rounded-full border border-gray-700">
+                                      Memory: {p.mem_limit / 1024}MB
+                                    </span>
+                                  )}
+                                </div>
+                                {p.tags?.length > 0 && (
+                                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                                    {p.tags.map((tag, tagIndex) => (
+                                      <span
+                                        key={tagIndex}
+                                        className="px-2 py-0.5 text-xs bg-sky-800/40 text-sky-300 rounded-full border border-sky-700/60"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              <a
+                                href={`/contests/${contestId}/problem/${p.problem_id}`}
+                                className="ml-0 sm:ml-4 flex-shrink-0 px-4 py-2 bg-cyan-600 text-gray-950 font-semibold rounded-lg hover:bg-cyan-500 transition-all duration-300 shadow hover:shadow-md hover:shadow-cyan-500/30 text-sm"
+                              >
+                                View Problem →
+                              </a>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -923,16 +970,16 @@ const ContestPage = () => {
                 </div>
               )}
 
-              {activeTab === "Status" && (
+              {activeTab === "All submissions" && (
                 <div className="bg-gray-800/40 border-2 border-cyan-400/40 backdrop-blur-md rounded-2xl p-8 shadow-[0_0_40px_0_rgba(34,211,238,0.15)] relative overflow-hidden">
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/20 via-sky-500/10 to-pink-400/20 blur-lg opacity-60 pointer-events-none" />
                   <div className="relative">
-                    <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-300 via-pink-400 to-sky-400 bg-clip-text text-transparent mb-6 text-center">
-                      Submission Status
-                    </h2>
-                    <div className="text-gray-400 text-lg text-center">
-                      Submission statuses will be displayed here.
-                    </div>
+                    <ContestStatus
+                      contestId={contestId}
+                      supabase={supabase}
+                      currentUser={user}
+                      contestState={getContestState()}
+                    />
                   </div>
                 </div>
               )}

@@ -94,7 +94,9 @@ const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const contestSubmissionRoutes = require("./routes/contestSubmissionRoutes");
 const standingsRoutes = require("./routes/standingsRoutes");
+const statusRoutes = require("./routes/statusRoutes");
 const groupRoutes = require("./routes/groupRoutes");
+const groupChatRoutes = require("./routes/groupChatRoutes");
 const discussionRoutes = require("./routes/DiscussionRoutes");
 
 // ─── Mount Routes ────────────────────────────────
@@ -156,12 +158,28 @@ app.use(
   standingsRoutes
 );
 app.use(
+  "/api/status",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  statusRoutes
+);
+app.use(
   "/api/groups",
   (req, res, next) => {
     req.supabase = supabase;
     next();
   },
   groupRoutes
+);
+app.use(
+  "/api/group-chat",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  groupChatRoutes
 );
 app.use(
   "/api/discussions",

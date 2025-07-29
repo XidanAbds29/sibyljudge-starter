@@ -244,24 +244,23 @@ router.get("/:contest_id", async (req, res) => {
         .maybeSingle();
       is_participant = !!part;
     }
-    if (started && is_participant) {
-      // Fetch full problem details for each contest problem
-      const problemIds = (contest.contest_problem || []).map((p) => p.problem_id);
-      if (problemIds.length > 0) {
-        const { data: problemDetails, error: probErr } = await supabase
-          .from("Problem")
-          .select("problem_id, external_id, title")
-          .in("problem_id", problemIds);
-        if (!probErr && problemDetails) {
-          // Map alias if present
-          problems = contest.contest_problem.map((cp) => {
-            const details = problemDetails.find((pd) => pd.problem_id === cp.problem_id) || {};
-            return {
-              ...details,
-              alias: cp.alias || null,
-            };
-          });
-        }
+    
+    // Always fetch basic problem information for the contest
+    const problemIds = (contest.contest_problem || []).map((p) => p.problem_id);
+    if (problemIds.length > 0) {
+      const { data: problemDetails, error: probErr } = await supabase
+        .from("Problem")
+        .select("problem_id, external_id, title, difficulty, time_limit, mem_limit")
+        .in("problem_id", problemIds);
+      if (!probErr && problemDetails) {
+        // Map alias if present
+        problems = contest.contest_problem.map((cp) => {
+          const details = problemDetails.find((pd) => pd.problem_id === cp.problem_id) || {};
+          return {
+            ...details,
+            alias: cp.alias || null,
+          };
+        });
       }
     }
     res.json({

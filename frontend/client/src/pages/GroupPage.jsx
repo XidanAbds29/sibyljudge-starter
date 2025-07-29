@@ -2,8 +2,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../components/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
+import GroupChat from "../components/GroupChat";
 
-const TABS = ["Members", "Notifications", "Description"];
+const TABS = ["Members", "Chat", "Description"];
 
 export default function GroupPage() {
   const { group_id } = useParams();
@@ -268,12 +269,14 @@ export default function GroupPage() {
           </motion.div>
         );
 
-      case "Notifications":
+      case "Chat":
         return (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-lg mb-2">No notifications yet</div>
-              <div className="text-sm text-gray-500">Group notifications will appear here when available.</div>
+            <div className="bg-gray-900/60 rounded-xl p-6 border border-cyan-400/40 hover:border-cyan-400/60 transition-all duration-300">
+              <GroupChat 
+                groupId={group_id} 
+                currentUser={user}
+              />
             </div>
           </motion.div>
         );
