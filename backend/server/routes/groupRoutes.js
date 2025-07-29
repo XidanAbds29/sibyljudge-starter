@@ -18,12 +18,49 @@ router.get('/', async (req, res) => {
     if (req.query.onlyPublic === 'true') {
       query = query.eq('is_private', false);
     }
-    const { data, error } = await query;
+    const { data: groups, error } = await query;
     if (error) {
       console.error('[GroupList] DB error:', error);
       return res.status(500).json({ error: error.message });
     }
-    res.json(data);
+
+    // Fetch creator information for each group
+    const groupsWithCreators = await Promise.all(groups.map(async (group) => {
+      try {
+        // Get creator information from group_creation table
+        const { data: groupCreation, error: creationError } = await supabase
+          .from('group_creation')
+          .select('created_by')
+          .eq('group_id', group.group_id)
+          .single();
+        
+        let creator = null;
+        if (!creationError && groupCreation?.created_by) {
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', groupCreation.created_by)
+            .single();
+          
+          if (!profileError && profile?.username) {
+            creator = profile.username;
+          }
+        }
+        
+        return {
+          ...group,
+          creator
+        };
+      } catch (error) {
+        console.error(`Error fetching creator for group ${group.group_id}:`, error);
+        return {
+          ...group,
+          creator: null
+        };
+      }
+    }));
+
+    res.json(groupsWithCreators);
   } catch (err) {
     console.error('[GroupList] Route error:', err);
     res.status(500).json({ error: err.message });
@@ -36,29 +73,41 @@ router.get('/:group_id', async (req, res) => {
   const group_id = req.params.group_id;
   const user_id = req.query.user_id;
   try {
-    // Fetch group and creator
+    // Fetch group basic info
     const { data: group, error } = await supabase
       .from('group')
-      .select('*, group_creation(created_by)')
+      .select('*')
       .eq('group_id', group_id)
       .single();
     if (error || !group) return res.status(404).json({ error: 'Group not found' });
-    // Get creator username (if available)
+
+    // Get creator information from group_creation table
     let creator = null;
-    if (group.group_creation?.created_by) {
-      const { data: profile } = await supabase
+    const { data: groupCreation, error: creationError } = await supabase
+      .from('group_creation')
+      .select('created_by')
+      .eq('group_id', group_id)
+      .single();
+    
+    if (!creationError && groupCreation?.created_by) {
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('username')
-        .eq('id', group.group_creation.created_by)
+        .eq('id', groupCreation.created_by)
         .single();
-      creator = profile?.username || null;
+      
+      if (!profileError && profile?.username) {
+        creator = profile.username;
+      }
     }
+
     // Get members
     const { data: members, error: memberError } = await supabase
       .from('group_member')
       .select('user_id, role, profiles(username, id)')
       .eq('group_id', group_id);
     if (memberError) throw memberError;
+
     // Check if user is a member
     let is_member = false;
     if (user_id) {
@@ -70,21 +119,24 @@ router.get('/:group_id', async (req, res) => {
         .maybeSingle();
       is_member = !!part;
     }
+
     res.json({
       group_id: group.group_id,
       name: group.name,
       description: group.description,
       is_private: group.is_private,
+      created_at: group.created_at,
       creator,
       is_member,
       members: (members || []).map(m => ({
         user_id: m.user_id,
         role: m.role,
-        username: m.profiles?.username || null,
-        id: m.profiles?.id || null,
+        username: m.profiles?.username || m.user_id,
+        uuid: m.profiles?.id || m.user_id,
       })),
     });
   } catch (err) {
+    console.error('Error fetching group:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -163,21 +215,214 @@ router.post('/:group_id/join', async (req, res) => {
   }
 });
 
-// User leaves a group (using UUID)
-router.post('/:group_id/leave', async (req, res) => {
+// Check admin leave warning before actual leave
+router.post('/:group_id/check-leave', async (req, res) => {
   const supabase = req.supabase;
   const { group_id } = req.params;
   const { user_id } = req.body;
   if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
+  
   try {
-    const { error } = await supabase
-      .from('group_member')
-      .delete()
+    // Get group info
+    const { data: group, error: groupError } = await supabase
+      .from('group')
+      .select('name')
       .eq('group_id', group_id)
-      .eq('user_id', user_id);
-    if (error) throw new Error(error.message);
-    res.json({ message: 'Left group' });
+      .single();
+    
+    if (groupError || !group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    
+    // Get user's role in the group
+    const { data: userMember, error: memberError } = await supabase
+      .from('group_member')
+      .select('role')
+      .eq('group_id', group_id)
+      .eq('user_id', user_id)
+      .single();
+    
+    if (memberError || !userMember) {
+      return res.status(404).json({ error: 'User not found in group' });
+    }
+    
+    // Get the creator of the group
+    const { data: groupCreation, error: creationError } = await supabase
+      .from('group_creation')
+      .select('created_by')
+      .eq('group_id', group_id)
+      .single();
+    
+    if (creationError) {
+      console.error('Error fetching group creation:', creationError);
+    }
+    
+    const isCreator = groupCreation?.created_by === user_id;
+    const isAdmin = userMember.role === 'admin';
+    
+    // Count remaining admins (excluding this user)
+    const { data: adminMembers, error: adminError } = await supabase
+      .from('group_member')
+      .select('user_id')
+      .eq('group_id', group_id)
+      .eq('role', 'admin')
+      .neq('user_id', user_id);
+    
+    if (adminError) {
+      throw new Error(adminError.message);
+    }
+    
+    const remainingAdminCount = adminMembers?.length || 0;
+    const willDeleteGroup = isAdmin && (remainingAdminCount === 0 || isCreator);
+    
+    res.json({
+      is_admin: isAdmin,
+      is_creator: isCreator,
+      admin_count: remainingAdminCount,
+      will_delete_group: willDeleteGroup,
+      group_name: group.name,
+      warning_message: willDeleteGroup 
+        ? `Warning: You are the ${isCreator ? 'creator' : 'last admin'} of this group. Leaving will permanently delete the entire group and remove all members.`
+        : null
+    });
+    
   } catch (err) {
+    console.error('[CheckAdminLeave] Route error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// User leaves a group (using UUID) - Enhanced with admin checks
+router.post('/:group_id/leave', async (req, res) => {
+  const supabase = req.supabase;
+  const { group_id } = req.params;
+  const { user_id, confirm_deletion } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'Missing user_id' });
+  
+  try {
+    // Get group info and user's role
+    const { data: group, error: groupError } = await supabase
+      .from('group')
+      .select('name')
+      .eq('group_id', group_id)
+      .single();
+    
+    if (groupError || !group) {
+      return res.status(404).json({ error: 'Group not found' });
+    }
+    
+    const { data: userMember, error: memberError } = await supabase
+      .from('group_member')
+      .select('role')
+      .eq('group_id', group_id)
+      .eq('user_id', user_id)
+      .single();
+    
+    if (memberError || !userMember) {
+      return res.status(404).json({ error: 'User not found in group' });
+    }
+    
+    // Get the creator of the group
+    const { data: groupCreation } = await supabase
+      .from('group_creation')
+      .select('created_by')
+      .eq('group_id', group_id)
+      .single();
+    
+    const isCreator = groupCreation?.created_by === user_id;
+    const isAdmin = userMember.role === 'admin';
+    
+    // Count remaining admins (excluding this user)
+    const { data: adminMembers } = await supabase
+      .from('group_member')
+      .select('user_id')
+      .eq('group_id', group_id)
+      .eq('role', 'admin')
+      .neq('user_id', user_id);
+    
+    const remainingAdminCount = adminMembers?.length || 0;
+    const willDeleteGroup = isAdmin && (remainingAdminCount === 0 || isCreator);
+    
+    // If this will delete the group, require confirmation
+    if (willDeleteGroup && !confirm_deletion) {
+      return res.status(400).json({ 
+        error: 'Group deletion confirmation required',
+        requires_confirmation: true,
+        warning_message: `Leaving will permanently delete the group "${group.name}" and remove all members.`
+      });
+    }
+    
+    // If group will be deleted, handle the deletion manually
+    if (willDeleteGroup) {
+      // Get all members for notifications
+      const { data: allMembers } = await supabase
+        .from('group_member')
+        .select('user_id')
+        .eq('group_id', group_id)
+        .neq('user_id', user_id);
+      
+      // Create notifications for other members
+      if (allMembers && allMembers.length > 0) {
+        const notifications = allMembers.map(member => ({
+          user_id: member.user_id,
+          type: 'group_deleted',
+          reference_id: parseInt(group_id),
+          title: 'Group Deleted',
+          message: `The group "${group.name}" has been automatically deleted because the admin left.`,
+          group_id: parseInt(group_id)
+        }));
+        
+        await supabase.from('notification').insert(notifications);
+      }
+      
+      // Delete in proper order to avoid foreign key violations
+      
+      // 1. Delete all notifications for this group
+      await supabase
+        .from('notification')
+        .delete()
+        .eq('group_id', group_id);
+      
+      // 2. Delete all group members
+      await supabase
+        .from('group_member')
+        .delete()
+        .eq('group_id', group_id);
+      
+      // 3. Delete group creation record
+      await supabase
+        .from('group_creation')
+        .delete()
+        .eq('group_id', group_id);
+      
+      // 4. Delete the group itself
+      await supabase
+        .from('group')
+        .delete()
+        .eq('group_id', group_id);
+      
+      res.json({ 
+        message: 'Group deleted successfully',
+        group_deleted: true
+      });
+    } else {
+      // Normal leave - just remove the user from group
+      const { error } = await supabase
+        .from('group_member')
+        .delete()
+        .eq('group_id', group_id)
+        .eq('user_id', user_id);
+      
+      if (error) throw new Error(error.message);
+      
+      res.json({ 
+        message: 'Left group successfully',
+        group_deleted: false
+      });
+    }
+    
+  } catch (err) {
+    console.error('[GroupLeave] Route error:', err);
     res.status(500).json({ error: err.message });
   }
 });
