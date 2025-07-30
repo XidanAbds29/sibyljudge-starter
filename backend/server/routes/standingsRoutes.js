@@ -114,7 +114,8 @@ router.get('/:contestId', async (req, res) => {
             solve_time: null,
             solve_time_formatted: null,
             penalty: 0,
-            status: 'unsolved'
+            status: 'unsolved',
+            first_solver: false
           };
           return acc;
         }, {})
@@ -150,6 +151,23 @@ router.get('/:contestId', async (req, res) => {
     const submissions = submissionsData || [];
     console.log(`[STANDINGS] Found ${submissions.length} relevant submissions`);
     
+    // Find first solvers for each problem
+    const firstSolvers = {};
+    problems.forEach(problem => {
+      const problemSubmissions = submissions
+        .filter(s => s.problem_id === problem.problem_id && s.status === 'AC')
+        .filter(s => {
+          const submissionTime = new Date(s.submitted_at);
+          return submissionTime >= contestStartTime && submissionTime <= contestEndTime;
+        })
+        .sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+      
+      if (problemSubmissions.length > 0) {
+        firstSolvers[problem.problem_id] = problemSubmissions[0].user_id;
+        console.log(`[STANDINGS] First solver for problem ${problem.problem_id}: user ${problemSubmissions[0].user_id}`);
+      }
+    });
+    
     // Process standings for each participant
     const standings = participants.map(participant => {
       const userId = participant.user_id;
@@ -173,7 +191,8 @@ router.get('/:contestId', async (req, res) => {
           solve_time: null,
           solve_time_formatted: null,
           penalty: 0,
-          status: 'unsolved' // 'solved', 'wrong', 'unsolved'
+          status: 'unsolved', // 'solved', 'wrong', 'unsolved'
+          first_solver: false
         };
       });
       
@@ -203,6 +222,11 @@ router.get('/:contestId', async (req, res) => {
             // Problem solved!
             problemData.solved = true;
             problemData.status = 'solved';
+            
+            // Check if this user was the first solver
+            if (firstSolvers[problemId] === userId) {
+              problemData.first_solver = true;
+            }
             
             // Calculate solve time in minutes
             const solveTimeMs = submissionTime - contestStartTime;

@@ -44,7 +44,13 @@ const Standings = ({ contestId }) => {
 
   const getProblemCellStyle = (problemData) => {
     if (problemData.solved) {
-      return "bg-green-900/40 text-green-300 border-green-500/50";
+      if (problemData.first_solver) {
+        // First solver gets a special cyan color
+        return "bg-cyan-900/60 text-cyan-200 border-cyan-400/70 shadow-lg shadow-cyan-500/30";
+      } else {
+        // Regular solver gets green color
+        return "bg-green-900/40 text-green-300 border-green-500/50";
+      }
     } else if (problemData.status === 'wrong') {
       return "bg-red-900/40 text-red-300 border-red-500/50";
     } else {
@@ -193,11 +199,11 @@ const Standings = ({ contestId }) => {
                       <div className="min-h-[40px] flex flex-col justify-center">
                         {problemData.solved ? (
                           <>
-                            <div className="text-xs text-green-300">
+                            <div className={`text-xs ${problemData.first_solver ? 'text-cyan-200' : 'text-green-300'}`}>
                               {problemData.solve_time_formatted}
                             </div>
                             {problemData.wrong_attempts > 0 && (
-                              <div className="text-xs text-green-400 mt-1">
+                              <div className={`text-xs mt-1 ${problemData.first_solver ? 'text-cyan-300' : 'text-green-400'}`}>
                                 (-{problemData.wrong_attempts})
                               </div>
                             )}

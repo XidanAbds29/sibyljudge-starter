@@ -35,6 +35,8 @@ const ContestPage = () => {
   const [activeTab, setActiveTab] = useState("Problems");
   const [contest, setContest] = useState(null);
   const [participants, setParticipants] = useState([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [participantsError, setParticipantsError] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionsError, setSubmissionsError] = useState(null);
@@ -49,6 +51,31 @@ const ContestPage = () => {
   const [userSelectedTab, setUserSelectedTab] = useState(false);
   const { user } = useAuth();
   const mainRef = useRef(null);
+
+  // Fetch contest participants
+  const fetchParticipants = async () => {
+    if (!contestId) return;
+
+    setParticipantsLoading(true);
+    setParticipantsError(null);
+    
+    try {
+      const response = await fetch(`/api/contests/${contestId}/participants`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch participants');
+      }
+      
+      const data = await response.json();
+      setParticipants(data.participants || []);
+    } catch (err) {
+      console.error('Error fetching participants:', err);
+      setParticipantsError(err.message || 'Failed to load participants');
+      setParticipants([]);
+    } finally {
+      setParticipantsLoading(false);
+    }
+  };
 
   // Fetch all submissions for this user in this contest
   const fetchContestSubmissions = async () => {
@@ -157,7 +184,13 @@ const ContestPage = () => {
 
   // Get available tabs based on user permissions
   const getAvailableTabs = () => {
+    const contestState = getContestState();
     const baseTabs = ["Description"];
+    
+    // For upcoming contests, add Participants tab before Description (only if user is a participant)
+    if (contestState === "upcoming" && user && contest?.is_participant) {
+      return ["Participants", "Description"];
+    }
     
     if (canAccessRestrictedTabs()) {
       return ["Problems", "My submissions", "All submissions", "Standings", "Description"];
@@ -170,19 +203,31 @@ const ContestPage = () => {
   const availableTabs = getAvailableTabs();
   const contestState = getContestState();
 
-  // Set default tab based on availability - prioritize Problems when available
+  // Set default tab based on availability - prioritize Problems when available, Participants for upcoming contests if participant
   useEffect(() => {
     const availableTabs = getAvailableTabs();
+    const contestState = getContestState();
     
     // If current tab is not available, switch to appropriate default
     if (!availableTabs.includes(activeTab)) {
-      const defaultTab = availableTabs.includes("Problems") ? "Problems" : "Description";
+      let defaultTab;
+      if (contestState === "upcoming" && availableTabs.includes("Participants") && user && contest?.is_participant) {
+        defaultTab = "Participants";
+      } else if (availableTabs.includes("Problems")) {
+        defaultTab = "Problems";
+      } else {
+        defaultTab = "Description";
+      }
       setActiveTab(defaultTab);
       setUserSelectedTab(false); // Reset user selection flag when auto-switching
     }
-    // Only auto-switch to Problems if user hasn't manually selected a tab
-    else if (!userSelectedTab && availableTabs.includes("Problems") && activeTab === "Description") {
-      setActiveTab("Problems");
+    // Only auto-switch if user hasn't manually selected a tab
+    else if (!userSelectedTab) {
+      if (contestState === "upcoming" && availableTabs.includes("Participants") && activeTab !== "Participants" && user && contest?.is_participant) {
+        setActiveTab("Participants");
+      } else if (contestState !== "upcoming" && availableTabs.includes("Problems") && activeTab === "Description") {
+        setActiveTab("Problems");
+      }
     }
   }, [user, contest, activeTab, userSelectedTab]);
 
@@ -252,6 +297,13 @@ const ContestPage = () => {
       fetchContestSubmissions();
     }
   }, [activeTab, contestId, user?.id, contest?.problems]);
+
+  // Fetch participants when switching to "Participants" tab
+  useEffect(() => {
+    if (activeTab === "Participants") {
+      fetchParticipants();
+    }
+  }, [activeTab, contestId]);
 
   // Reset active tab if current tab becomes unavailable
   useEffect(() => {
@@ -989,6 +1041,74 @@ const ContestPage = () => {
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-pink-400/20 via-purple-500/10 to-cyan-400/20 blur-lg opacity-60 pointer-events-none" />
                   <div className="relative">
                     <Standings contestId={contestId} />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "Participants" && (
+                <div className="bg-gray-800/40 border-2 border-cyan-400/40 backdrop-blur-md rounded-2xl p-8 shadow-[0_0_40px_0_rgba(34,211,238,0.15)] relative overflow-hidden">
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cyan-400/20 via-sky-500/10 to-pink-400/20 blur-lg opacity-60 pointer-events-none" />
+                  <div className="relative">
+                    <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-300 via-pink-400 to-sky-400 bg-clip-text text-transparent mb-6 text-center">
+                      Contest Participants
+                    </h2>
+                    
+                    {/* Loading state */}
+                    {participantsLoading && (
+                      <div className="text-center py-10">
+                        <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-cyan-400"></div>
+                        <p className="mt-4 text-gray-400">Loading participants...</p>
+                      </div>
+                    )}
+
+                    {/* Error state */}
+                    {participantsError && (
+                      <div className="my-4 p-4 bg-red-900/60 text-red-200 rounded-lg border border-red-700 shadow-lg">
+                        <p>
+                          <strong className="font-semibold">Error:</strong> {participantsError}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Participants List */}
+                    {!participantsLoading && !participantsError && (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        {participants.length > 0 ? (
+                          <div className="space-y-4">
+                            <div className="mb-6 text-center">
+                              <p className="text-gray-300">
+                                <span className="font-semibold text-cyan-300">{participants.length}</span> participant{participants.length !== 1 ? 's' : ''} registered
+                              </p>
+                            </div>
+                            {participants.map((participant, index) => (
+                              <div 
+                                key={participant.user_id} 
+                                className="flex items-center justify-between p-6 bg-gray-900/60 rounded-xl border border-cyan-400/40 hover:border-cyan-400/60 transition-all duration-300 hover:bg-gray-800/60"
+                              >
+                                <div className="flex items-center space-x-4">
+                                  <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                    {participant.username.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="text-cyan-300 font-semibold text-lg">
+                                      {participant.username}
+                                    </span>
+                                    <div className="text-sm text-gray-400">
+                                      Status: <span className="text-pink-400 font-medium">Registered</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="text-gray-400 text-lg mb-2">No participants yet</div>
+                            <div className="text-sm text-gray-500">Be the first to join this contest!</div>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
                   </div>
                 </div>
               )}

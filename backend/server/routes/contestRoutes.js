@@ -635,4 +635,42 @@ router.get("/:contest_id/submissions/user/:user_id/problem/:problem_id", async (
   }
 });
 
+// Get contest participants
+router.get("/:contest_id/participants", async (req, res) => {
+  const supabase = req.supabase;
+  const { contest_id } = req.params;
+  
+  try {
+    // Fetch participants with their usernames
+    const { data: participants, error } = await supabase
+      .from("user_participant")
+      .select(`
+        user_id,
+        profiles!inner(username)
+      `)
+      .eq("contest_id", contest_id)
+      .order("profiles(username)", { ascending: true });
+    
+    if (error) {
+      console.error("Error fetching contest participants:", error);
+      return res.status(500).json({ error: "Failed to fetch participants" });
+    }
+    
+    // Transform the data
+    const formattedParticipants = (participants || []).map(p => ({
+      user_id: p.user_id,
+      username: p.profiles?.username || "Unknown User"
+    }));
+    
+    res.json({ 
+      participants: formattedParticipants,
+      total: formattedParticipants.length
+    });
+    
+  } catch (err) {
+    console.error("Error in participants endpoint:", err);
+    res.status(500).json({ error: err.message || "Internal server error" });
+  }
+});
+
 module.exports = router;

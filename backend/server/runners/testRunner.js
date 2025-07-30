@@ -13,7 +13,7 @@ fs.mkdir(TEMP_DIR, { recursive: true }).catch(console.error);
 const LANGS = {
   cpp: {
     ext: ".cpp",
-    compile: (file) => ["g++", [file, "-o", file.replace(".cpp", ""), "-std=c++17", "-O2"]],
+    compile: (file) => ["g++", [file, "-o", file.replace(".cpp", ""), "-std=c++17", "-O2", "-fsanitize=undefined", "-fno-sanitize-recover=undefined"]],
     run: (file) => [file.replace(".cpp", ""), []],
   },
   python: {
