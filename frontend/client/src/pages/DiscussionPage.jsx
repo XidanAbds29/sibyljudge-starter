@@ -243,7 +243,6 @@ export default function DiscussionPage() {
               </button>
             </>
           )}
-          {/* Unanswered tab removed */}
         </div>
       </div>
 

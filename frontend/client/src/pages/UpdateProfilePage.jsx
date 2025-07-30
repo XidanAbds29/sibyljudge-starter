@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../components/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 function NeonGlowSVG({ className = "", style = {}, ...props }) {
   return (
@@ -33,7 +34,7 @@ function NeonGlowSVG({ className = "", style = {}, ...props }) {
 }
 
 const UpdateProfilePage = () => {
-  const { user, setUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     username: user?.username || "",
@@ -73,22 +74,30 @@ const UpdateProfilePage = () => {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch("/api/auth/profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update profile");
-      }
-      const data = await res.json();
-      setUser(data);
-      setSuccess("Profile updated!");
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not authenticated");
+
+      // Update profile directly
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          username: form.username,
+          institution: form.institution,
+          bio: form.bio,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setSuccess("Profile updated successfully!");
       setTimeout(() => navigate("/profile"), 1000);
     } catch (err) {
-      setError(err.message);
+      console.error('Profile update error:', err);
+      setError(err.message || "Failed to update profile");
     } finally {
       setLoading(false);
     }
