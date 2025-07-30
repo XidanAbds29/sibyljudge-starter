@@ -75,12 +75,7 @@ export default function NewDiscussionPage() {
             group_id: discussion.type === 'group' ? parseInt(discussion.referenceId) : null,
           },
         ])
-        .select(`
-          *,
-          related_problem:problem_id("Problem", title),
-          related_contest:contest_id(name),
-          related_group:group_id(name)
-        `)
+        .select('*')
         .single();
 
       if (threadError) throw threadError;
