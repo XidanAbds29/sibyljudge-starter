@@ -62,20 +62,6 @@ export default function DiscussionPage() {
       // Handle tabs
       if (activeTab === "my" && user?.id) {
         query = query.eq("created_by", user.id);
-      } else if (activeTab === "unanswered") {
-        // For unanswered, we check if there are any posts
-        const { data: threadIds } = await supabase
-          .from("discussion_post")
-          .select("dissthread_id")
-          .groupBy("dissthread_id");
-
-        if (threadIds?.length > 0) {
-          query = query.not(
-            "dissthread_id",
-            "in",
-            threadIds.map((t) => t.dissthread_id)
-          );
-        }
       }
 
       // Add pagination
@@ -195,16 +181,6 @@ export default function DiscussionPage() {
               </button>
             </>
           )}
-          <button
-            onClick={() => handleTabChange("unanswered")}
-            className={`py-2 px-4 ${
-              activeTab === "unanswered"
-                ? "text-cyan-400 border-b-2 border-cyan-400"
-                : "text-gray-400 hover:text-cyan-400"
-            }`}
-          >
-            Unanswered
-          </button>
         </div>
       </div>
 
