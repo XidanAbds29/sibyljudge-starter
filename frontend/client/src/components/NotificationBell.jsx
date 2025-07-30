@@ -1,11 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNotifications } from "./NotificationContext";
 import { format } from "date-fns";
-import { Link } from "react-router-dom";
-
 const NotificationBell = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -25,30 +22,7 @@ const NotificationBell = () => {
     if (!notification.is_read) {
       await markAsRead(notification.notification_id);
     }
-
-    // Handle navigation based on notification type
-    switch (notification.type) {
-      case "contest_start":
-      case "contest_end":
-        window.location.href = `/contest/${notification.contest_id}`;
-        break;
-      case "thread_reply":
-        window.location.href = `/discussion/thread/${notification.thread_id}`;
-        break;
-      case "editorial_update":
-        window.location.href = `/problem/${notification.problem_id}/editorial`;
-        break;
-      case "group_invite":
-      case "group_join":
-        window.location.href = `/group/${notification.group_id}`;
-        break;
-      case "track_completed":
-        window.location.href = `/track/${notification.track_id}`;
-        break;
-      default:
-        break;
-    }
-    setIsOpen(false);
+    // No navigation, just mark as read
   };
 
   const getNotificationIcon = (type) => {
@@ -109,18 +83,18 @@ const NotificationBell = () => {
               </button>
             )}
           </div>
-          <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
-              <div className="p-4 text-gray-400 text-center">
-                No notifications yet
+              <div className="p-4 text-center text-gray-400">
+                No notifications
               </div>
             ) : (
               notifications.map((notification) => (
                 <div
                   key={notification.notification_id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`p-4 border-b border-gray-700 cursor-pointer hover:bg-gray-700 transition-colors ${
-                    !notification.is_read ? "bg-gray-750" : ""
+                  className={`p-4 border-b border-gray-700 ${
+                    !notification.is_read ? "bg-gray-700/50" : ""
                   }`}
                 >
                   <div className="flex items-start">
@@ -146,7 +120,7 @@ const NotificationBell = () => {
                       </span>
                     </div>
                     {!notification.is_read && (
-                      <span className="w-2 h-2 bg-cyan-400 rounded-full mt-2"></span>
+                      <span className="w-2 h-2 bg-cyan-400 rounded-full mt-2" />
                     )}
                   </div>
                 </div>
