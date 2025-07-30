@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../components/AuthContext";
 import MDEditor from "@uiw/react-md-editor";
+import { motion } from "framer-motion";
 
 export default function NewDiscussionPage() {
   const navigate = useNavigate();
@@ -112,81 +113,91 @@ export default function NewDiscussionPage() {
 
   if (!user) {
     return (
-      <div className="text-center py-8 text-gray-400">
-        Please sign in to create a discussion.
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="bg-gray-900/80 rounded-xl p-8 shadow-lg border border-cyan-500/20">
+          <h2 className="text-2xl font-bold text-cyan-300 mb-4">Sign In Required</h2>
+          <p className="text-gray-400 mb-4">Please sign in to create a discussion.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      <h1 className="text-2xl font-bold text-white mb-6">New Discussion</h1>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
-          <div className="bg-red-900/50 border border-red-500 text-red-300 px-4 py-2 rounded">
-            {error}
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Title
-          </label>
-          <input
-            type="text"
-            value={discussion.title}
-            onChange={(e) =>
-              setDiscussion((prev) => ({ ...prev, title: e.target.value }))
-            }
-            className="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2"
-            placeholder="Enter discussion title"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Type
-          </label>
-          <select
-            value={discussion.type}
-            onChange={(e) =>
-              setDiscussion((prev) => ({ ...prev, type: e.target.value }))
-            }
-            className="w-full bg-gray-700 text-white border border-gray-600 rounded px-3 py-2"
-          >
-            {threadTypes.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">
-            Content
-          </label>
-          <MDEditor
-            value={discussion.content}
-            onChange={(value) =>
-              setDiscussion((prev) => ({ ...prev, content: value || "" }))
-            }
-            preview="edit"
-          />
-        </div>
-
-        <div className="pt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-2 rounded-md disabled:opacity-50"
-          >
-            {loading ? "Creating..." : "Create Discussion"}
-          </button>
-        </div>
-      </form>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800/80 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-32 pointer-events-none z-0">
+        <svg width="100%" height="100%" viewBox="0 0 1440 200" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+          <ellipse cx="720" cy="100" rx="700" ry="60" fill="url(#neon-glow-discussions)" />
+          <defs>
+            <radialGradient id="neon-glow-discussions" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#00fff7" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#00fff7" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+        </svg>
+      </div>
+      <div className="relative z-10 w-full max-w-xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="group-section-animate bg-gradient-to-br from-gray-900 to-gray-800/70 rounded-2xl border border-cyan-500/20 shadow-[0_0_40px_-15px_rgba(0,238,255,0.25)] p-8"
+        >
+          <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-300 mb-8 text-center">
+            Create New Discussion
+          </h1>
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {error && (
+              <div className="bg-red-900/50 border border-red-500 text-red-300 px-4 py-2 rounded text-center">
+                {error}
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-cyan-300 mb-2">Title</label>
+              <input
+                type="text"
+                value={discussion.title}
+                onChange={(e) => setDiscussion((prev) => ({ ...prev, title: e.target.value }))}
+                className="w-full bg-gray-800/60 text-cyan-100 border border-cyan-500/30 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400 transition-all duration-200"
+                placeholder="Enter discussion title"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cyan-300 mb-2">Type</label>
+              <select
+                value={discussion.type}
+                onChange={(e) => setDiscussion((prev) => ({ ...prev, type: e.target.value }))}
+                className="w-full bg-gray-800/60 text-cyan-100 border border-cyan-500/30 rounded-lg px-4 py-3 focus:outline-none focus:border-cyan-400 transition-all duration-200"
+              >
+                {threadTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-cyan-300 mb-2">Content</label>
+              <div className="bg-gray-800/60 border border-cyan-500/20 rounded-lg p-2">
+                <MDEditor
+                  value={discussion.content}
+                  onChange={(value) => setDiscussion((prev) => ({ ...prev, content: value || "" }))}
+                  preview="edit"
+                />
+              </div>
+            </div>
+            <div className="pt-4 text-center">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-gradient-to-r from-cyan-500 to-cyan-400 text-white px-8 py-3 rounded-lg font-bold shadow-lg hover:from-cyan-400 hover:to-cyan-500 transition-all duration-200 disabled:opacity-50"
+              >
+                {loading ? "Creating..." : "Create Discussion"}
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </div>
     </div>
   );
 }

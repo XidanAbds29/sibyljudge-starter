@@ -111,16 +111,6 @@ function Navbar() {
             Groups
           </Link>
           <Link
-            to="/faq"
-            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
-              isActive("/faq")
-                ? "text-cyan-400"
-                : "text-gray-300 hover:text-cyan-400"
-            }`}
-          >
-            FAQ
-          </Link>
-          <Link
             to="/discussions"
             className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
               isActive("/discussions")
@@ -129,6 +119,16 @@ function Navbar() {
             }`}
           >
             Discussion
+          </Link>
+          <Link
+            to="/faq"
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/faq")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
+          >
+            FAQ
           </Link>
           {user ? (
             <>

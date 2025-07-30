@@ -3,6 +3,33 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../components/AuthContext";
 import { format } from "date-fns";
+import { motion } from "framer-motion";
+import { gsap } from "gsap";
+
+// Neon SVG Glow Component
+function NeonGlowSVG({ className = "", style = {}, ...props }) {
+  return (
+    <svg
+      className={"absolute pointer-events-none z-0 " + className}
+      style={style}
+      width="100%"
+      height="100%"
+      viewBox="0 0 1440 200"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="none"
+      {...props}
+    >
+      <defs>
+        <radialGradient id="neon-glow-discussions" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#00fff7" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#00fff7" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <ellipse cx="720" cy="100" rx="700" ry="60" fill="url(#neon-glow-discussions)" />
+    </svg>
+  );
+}
 
 export default function DiscussionPage() {
   const { user } = useAuth();
@@ -14,13 +41,13 @@ export default function DiscussionPage() {
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [isSubscribed, setIsSubscribed] = useState(false);
   const [filters, setFilters] = useState({
     type: searchParams.get("type") || "all",
     problem: searchParams.get("problem") || "",
     contest: searchParams.get("contest") || "",
     group: searchParams.get("group") || "",
   });
+  const listRef = React.useRef(null);
 
   const ITEMS_PER_PAGE = 20;
 
@@ -62,20 +89,6 @@ export default function DiscussionPage() {
       // Handle tabs
       if (activeTab === "my" && user?.id) {
         query = query.eq("created_by", user.id);
-      } else if (activeTab === "unanswered") {
-        // For unanswered, we check if there are any posts
-        const { data: threadIds } = await supabase
-          .from("discussion_post")
-          .select("dissthread_id")
-          .groupBy("dissthread_id");
-
-        if (threadIds?.length > 0) {
-          query = query.not(
-            "dissthread_id",
-            "in",
-            threadIds.map((t) => t.dissthread_id)
-          );
-        }
       }
 
       // Add pagination
@@ -131,25 +144,60 @@ export default function DiscussionPage() {
     window.scrollTo(0, 0);
   };
 
+  useEffect(() => {
+    if (listRef.current && threads.length > 0) {
+      gsap.fromTo(
+        listRef.current,
+        { opacity: 0, y: 40, filter: "blur(10px)" },
+        {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 1.1,
+          ease: "power4.out",
+        }
+      );
+      const items = listRef.current.querySelectorAll(".discussion-card-animate");
+      gsap.fromTo(
+        items,
+        { opacity: 0, y: 30, scale: 0.97 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.7,
+          stagger: 0.08,
+          ease: "power3.out",
+          delay: 0.2,
+        }
+      );
+    }
+  }, [threads]);
+
   return (
-    <div className="min-h-screen">
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-white">Discussions</h1>
-          <Link
-            to="/discussions/new"
-            className="bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-md transition duration-300"
-          >
-            New Discussion
-          </Link>
-        </div>
+    <div className="min-h-screen relative overflow-hidden">
+      <div className="relative z-10">
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-white to-cyan-300">
+              Discussions
+            </h1>
+            <Link
+              to="/discussions/new"
+              className="relative overflow-hidden px-6 py-2 rounded-lg bg-gradient-to-r from-cyan-500/20 to-cyan-500/0 hover:from-cyan-500/40 hover:to-cyan-500/10 border border-cyan-500/50 text-cyan-300 transition-all duration-300 group"
+            >
+              <span className="relative z-10">New Discussion</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </Link>
+          </div>
+          <NeonGlowSVG className="top-0 left-0" />
 
         {/* Filters */}
         <div className="flex flex-wrap gap-4 mb-4">
           <select
             value={filters.type}
             onChange={(e) => handleFilterChange("type", e.target.value)}
-            className="bg-gray-700 text-white border border-gray-600 rounded px-3 py-1"
+            className="bg-gray-800/50 text-cyan-300 border border-cyan-500/30 rounded-lg px-4 py-2 backdrop-blur-xl hover:border-cyan-500/50 transition-colors duration-300"
           >
             {threadTypes.map((type) => (
               <option key={type.value} value={type.value}>
@@ -160,13 +208,13 @@ export default function DiscussionPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 border-b border-gray-700">
+        <div className="flex space-x-4 border-b border-cyan-500/20">
           <button
             onClick={() => handleTabChange("all")}
-            className={`py-2 px-4 ${
+            className={`py-2 px-4 transition-all duration-300 ${
               activeTab === "all"
-                ? "text-cyan-400 border-b-2 border-cyan-400"
-                : "text-gray-400 hover:text-cyan-400"
+                ? "text-cyan-300 border-b-2 border-cyan-500"
+                : "text-cyan-300/50 hover:text-cyan-300 hover:border-b-2 hover:border-cyan-500/50"
             }`}
           >
             All
@@ -175,75 +223,69 @@ export default function DiscussionPage() {
             <>
               <button
                 onClick={() => handleTabChange("my")}
-                className={`py-2 px-4 ${
+                className={`py-2 px-4 transition-all duration-300 ${
                   activeTab === "my"
-                    ? "text-cyan-400 border-b-2 border-cyan-400"
-                    : "text-gray-400 hover:text-cyan-400"
+                    ? "text-cyan-300 border-b-2 border-cyan-500"
+                    : "text-cyan-300/50 hover:text-cyan-300 hover:border-b-2 hover:border-cyan-500/50"
                 }`}
               >
                 My Threads
               </button>
               <button
                 onClick={() => handleTabChange("participated")}
-                className={`py-2 px-4 ${
+                className={`py-2 px-4 transition-all duration-300 ${
                   activeTab === "participated"
-                    ? "text-cyan-400 border-b-2 border-cyan-400"
-                    : "text-gray-400 hover:text-cyan-400"
+                    ? "text-cyan-300 border-b-2 border-cyan-500"
+                    : "text-cyan-300/50 hover:text-cyan-300 hover:border-b-2 hover:border-cyan-500/50"
                 }`}
               >
                 Participated
               </button>
             </>
           )}
-          <button
-            onClick={() => handleTabChange("unanswered")}
-            className={`py-2 px-4 ${
-              activeTab === "unanswered"
-                ? "text-cyan-400 border-b-2 border-cyan-400"
-                : "text-gray-400 hover:text-cyan-400"
-            }`}
-          >
-            Unanswered
-          </button>
+          {/* Unanswered tab removed */}
         </div>
       </div>
 
       {/* Discussion list */}
-      {loading ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-400"></div>
-        </div>
-      ) : error ? (
-        <div className="text-red-500 text-center py-4">{error}</div>
-      ) : threads.length === 0 ? (
-        <div className="text-gray-400 text-center py-8">
-          No discussions found. Start a new discussion!
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {threads.map((thread) => (
-            <div
-              key={thread.dissthread_id}
-              className="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition duration-300 cursor-pointer"
-              onClick={() => navigate("/discussions/" + thread.dissthread_id)}
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-2">
-                    {thread.title}
-                  </h3>
-                  <div className="text-sm text-gray-400">
-                    Started by {thread.creator?.username || "Unknown"} •{" "}
-                    {format(new Date(thread.created_at), "MMM d, yyyy")} •{" "}
-                    {thread.posts.count} replies
+      <div ref={listRef} className="relative">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-400"></div>
+          </div>
+        ) : error ? (
+          <div className="text-red-500 text-center py-4">{error}</div>
+        ) : threads.length === 0 ? (
+          <div className="text-gray-400 text-center py-8">
+            No discussions found. Start a new discussion!
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {threads.map((thread) => (
+              <motion.div
+                key={thread.dissthread_id}
+                className="discussion-card-animate relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-gray-900 to-gray-800/50 rounded-xl border border-cyan-500/10 p-4 cursor-pointer hover:border-cyan-500/30 transition-all duration-300 group"
+                onClick={() => navigate("/discussions/" + thread.dissthread_id)}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="relative z-10 flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-white mb-2">
+                      {thread.title}
+                    </h3>
+                    <div className="text-sm text-cyan-300/70">
+                      Started by{" "}
+                      <span className="text-cyan-300">{thread.creator?.username || "Unknown"}</span> •{" "}
+                      {format(new Date(thread.created_at), "MMM d, yyyy")} •{" "}
+                      <span className="text-cyan-300">{thread.posts.count}</span> replies
+                    </div>
+                  </div>
+                  <div className="text-sm px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/30">
+                    {thread.thread_type}
                   </div>
                 </div>
-                <div className="text-sm text-gray-400">
-                  {thread.thread_type}
-                </div>
-              </div>
-            </div>
-          ))}
+              </motion.div>
+            ))}
         </div>
       )}
 
@@ -254,10 +296,10 @@ export default function DiscussionPage() {
             <button
               key={i + 1}
               onClick={() => handlePageChange(i + 1)}
-              className={`px-3 py-1 rounded ${
+              className={`px-4 py-2 rounded-lg transition-all duration-300 ${
                 currentPage === i + 1
-                  ? "bg-cyan-500 text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  ? "bg-gradient-to-r from-cyan-500/20 to-cyan-500/0 text-cyan-300 border border-cyan-500/50"
+                  : "bg-gray-800/50 text-cyan-300/70 border border-cyan-500/20 hover:border-cyan-500/40 hover:text-cyan-300"
               }`}
             >
               {i + 1}
@@ -265,6 +307,8 @@ export default function DiscussionPage() {
           ))}
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }
