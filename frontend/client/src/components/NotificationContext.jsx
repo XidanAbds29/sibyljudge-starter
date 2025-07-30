@@ -84,33 +84,19 @@ export const NotificationProvider = ({ children }) => {
     }
   };
 
-  // Subscribe to real-time notifications
+  // Set up polling for notifications
   useEffect(() => {
     if (!user) return;
-
-    const subscription = supabase
-      .channel("notification_changes")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "notification",
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications((prev) => [payload.new, ...prev]);
-          setUnreadCount((prev) => prev + 1);
-        }
-      )
-      .subscribe();
 
     // Initial fetch
     fetchNotifications();
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    // Set up polling interval
+    const pollInterval = setInterval(() => {
+      fetchNotifications();
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(pollInterval);
   }, [user]);
 
   return (

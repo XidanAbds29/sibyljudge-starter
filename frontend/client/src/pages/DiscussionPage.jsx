@@ -63,7 +63,19 @@ export default function DiscussionPage() {
       if (activeTab === "my" && user?.id) {
         query = query.eq("created_by", user.id);
       } else if (activeTab === "unanswered") {
-        query = query.eq("posts.count", 0);
+        // For unanswered, we check if there are any posts
+        const { data: threadIds } = await supabase
+          .from("discussion_post")
+          .select("dissthread_id")
+          .groupBy("dissthread_id");
+
+        if (threadIds?.length > 0) {
+          query = query.not(
+            "dissthread_id",
+            "in",
+            threadIds.map((t) => t.dissthread_id)
+          );
+        }
       }
 
       // Add pagination
@@ -92,31 +104,14 @@ export default function DiscussionPage() {
     fetchThreads();
   }, [fetchThreads]);
 
-  // Effect for realtime subscription
+  // Effect for polling discussions
   useEffect(() => {
-    const channel = supabase.channel("realtime-discussions");
-    channel
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "discussion_thread",
-        },
-        () => {
-          console.log("Received discussion update");
-          fetchThreads();
-        }
-      )
-      .subscribe((status) => {
-        console.log("Channel status:", status);
-        setIsSubscribed(status === "SUBSCRIBED");
-      });
-    return () => {
-      console.log("Cleaning up subscription");
-      setIsSubscribed(false);
-      channel.unsubscribe();
-    };
+    // Set up polling for discussions
+    const pollInterval = setInterval(() => {
+      fetchThreads();
+    }, 15000); // Poll every 15 seconds
+
+    return () => clearInterval(pollInterval);
   }, [fetchThreads]);
 
   const handleTabChange = (tab) => {

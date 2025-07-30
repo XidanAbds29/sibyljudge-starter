@@ -1,320 +1,321 @@
-create table public."Online_judge" (
-  judge_id serial not null,
-  name character varying(100) not null,
-  api_based_url text null,
-  constraint Online_judge_pkey primary key (judge_id)
-) TABLESPACE pg_default;
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
 
-
-create table public."Problem" (
-  problem_id serial not null,
-  source_oj_id integer not null,
-  external_id character varying(100) not null,
-  title character varying(200) not null,
-  url text null,
-  difficulty character varying(20) null,
-  time_limit integer not null,
-  mem_limit integer not null,
-  statement_html text null,
-  input_spec text null,
-  output_spec text null,
-  samples jsonb null,
-  fetched_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint Problem_pkey primary key (problem_id),
-  constraint Problem_source_oj_id_fkey foreign KEY (source_oj_id) references "Online_judge" (judge_id)
-) TABLESPACE pg_default;
-
-create table public."Problem_tag" (
-  problem_id integer not null,
-  tag_id integer not null,
-  constraint Problem_tag_pkey primary key (problem_id, tag_id),
-  constraint Problem_tag_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id) on delete CASCADE,
-  constraint Problem_tag_tag_id_fkey foreign KEY (tag_id) references "Tag" (tag_id) on delete CASCADE
-) TABLESPACE pg_default;
-
-
-create table public."Tag" (
-  tag_id serial not null,
-  name character varying(100) not null,
-  constraint Tag_pkey primary key (tag_id),
-  constraint Tag_name_key unique (name)
-) TABLESPACE pg_default;
-
-create table public.badge (
-  badge_id serial not null,
-  name character varying(100) not null,
-  icon_url text null,
-  description text null,
-  constraint badge_pkey primary key (badge_id)
-) TABLESPACE pg_default;
-
-
-create table public.contest (
-  contest_id serial not null,
-  name character varying(200) not null,
-  password_hash text null,
-  start_time timestamp without time zone null,
-  end_time timestamp without time zone null,
-  is_virtual boolean null default false,
-  is_secured boolean null default false,
-  difficulty character varying(50) null,
-  description character varying(1000) null,
-  constraint contest_pkey primary key (contest_id)
-) TABLESPACE pg_default;
-
-create table public.contest_creation (
-  creation_id serial not null,
-  created_by uuid not null,
-  contest_id integer not null,
-  constraint contest_creation_pkey primary key (creation_id),
-  constraint contest_creation_contest_id_fkey foreign KEY (contest_id) references contest (contest_id),
-  constraint contest_creation_created_by_fkey foreign KEY (created_by) references profiles (id)
-) TABLESPACE pg_default;
-
-
-create table public.contest_problem (
-  contest_id integer not null,
-  problem_id integer not null,
-  alias character varying(50) null,
-  constraint contest_problem_pkey primary key (contest_id, problem_id),
-  constraint contest_problem_contest_id_fkey foreign KEY (contest_id) references contest (contest_id),
-  constraint contest_problem_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id)
-) TABLESPACE pg_default;
-
-create table public.contest_submission (
-  conprob_id serial not null,
-  contest_id integer not null,
-  submission_id integer not null,
-  constraint contest_submission_pkey primary key (conprob_id),
-  constraint contest_submission_contest_id_fkey foreign KEY (contest_id) references contest (contest_id)
-) TABLESPACE pg_default;
-
-create table public.discussion_post (
-  disspost_id serial not null,
-  dissthread_id integer not null,
-  user_id uuid not null,
-  content text null,
-  posted_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint discussion_post_pkey primary key (disspost_id),
-  constraint discussion_post_dissthread_id_fkey foreign KEY (dissthread_id) references discussion_thread (dissthread_id),
-  constraint discussion_post_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.discussion_thread (
-  dissthread_id serial not null,
-  created_by uuid not null,
-  title character varying(200) not null,
-  thread_type character varying(50) null,
-  reference_id integer null,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint discussion_thread_pkey primary key (dissthread_id),
-  constraint discussion_thread_created_by_fkey foreign KEY (created_by) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.discussion_thread (
-  dissthread_id serial not null,
-  created_by uuid not null,
-  title character varying(200) not null,
-  thread_type character varying(50) null,
-  reference_id integer null,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint discussion_thread_pkey primary key (dissthread_id),
-  constraint discussion_thread_created_by_fkey foreign KEY (created_by) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.fav_prob (
-  fav_prob_id serial not null,
-  user_id uuid not null,
-  problem_id integer not null,
-  constraint fav_prob_pkey primary key (fav_prob_id),
-  constraint fav_prob_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint fav_prob_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-
-create table public.fav_prob (
-  fav_prob_id serial not null,
-  user_id uuid not null,
-  problem_id integer not null,
-  constraint fav_prob_pkey primary key (fav_prob_id),
-  constraint fav_prob_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint fav_prob_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.group (
-  group_id serial not null,
-  name character varying(100) not null,
-  description text null,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  is_private boolean not null default false,
-  password_hash text null,
-  constraint group_pkey primary key (group_id)
-) TABLESPACE pg_default;
-
-create table public.group_creation (
-  grp_crt_id serial not null,
-  created_by uuid not null,
-  group_id integer not null,
-  constraint group_creation_pkey primary key (grp_crt_id),
-  constraint group_creation_created_by_fkey foreign KEY (created_by) references profiles (id),
-  constraint group_creation_group_id_fkey foreign KEY (group_id) references "group" (group_id)
-) TABLESPACE pg_default;
-
-create table public.group_member (
-  group_member_id serial not null,
-  group_id integer not null,
-  user_id uuid not null,
-  joined_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  role character varying(50) not null default 'member'::character varying,
-  constraint group_member_pkey primary key (group_member_id),
-  constraint group_member_group_id_fkey foreign KEY (group_id) references "group" (group_id),
-  constraint group_member_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.notification (
-  notification_id serial not null,
-  user_id uuid not null,
-  type character varying(50) not null,
-  reference_id integer null,
-  title character varying(200) not null,
-  message text not null,
-  is_read boolean null default false,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  read_at timestamp without time zone null,
-  group_id integer null,
-  constraint notification_pkey primary key (notification_id),
-  constraint notification_group_id_fkey foreign KEY (group_id) references "group" (group_id),
-  constraint notification_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.personal_record (
-  record_id serial not null,
-  user_id uuid not null,
-  problem_id integer not null,
-  status character varying(50) not null default 'attempted'::character varying,
-  attempts_count integer not null default 0,
-  first_attempted timestamp without time zone null default CURRENT_TIMESTAMP,
-  last_attempted timestamp without time zone null,
-  solved_at timestamp without time zone null,
-  constraint personal_record_pkey primary key (record_id),
-  constraint personal_record_user_id_problem_id_key unique (user_id, problem_id),
-  constraint personal_record_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint personal_record_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.problem_editorial (
-  probed_id serial not null,
-  problem_id integer not null,
-  created_by uuid not null,
-  content text null,
-  status character varying(50) not null default 'draft'::character varying,
-  created_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  updated_at timestamp without time zone null,
-  constraint problem_editorial_pkey primary key (probed_id),
-  constraint problem_editorial_created_by_fkey foreign KEY (created_by) references profiles (id),
-  constraint problem_editorial_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id)
-) TABLESPACE pg_default;
-
-
-create table public.profiles (
-  id uuid not null,
-  username character varying(50) not null,
-  institution character varying(100) null,
-  bio character varying(100) null,
-  is_admin boolean not null default false,
-  created_at timestamp with time zone not null default timezone ('utc'::text, now()),
-  updated_at timestamp with time zone not null default timezone ('utc'::text, now()),
-  constraint profiles_pkey primary key (id),
-  constraint profiles_username_key unique (username),
-  constraint profiles_id_fkey foreign KEY (id) references auth.users (id) on delete CASCADE
-) TABLESPACE pg_default;
-
-create trigger on_profiles_updated BEFORE
-update on profiles for EACH row
-execute FUNCTION handle_updated_at ();
-
-create table public.recommendation (
-  user_id uuid not null,
-  problem_id integer not null,
-  score double precision null,
-  generated_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint recommendation_pkey primary key (user_id, problem_id),
-  constraint recommendation_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint recommendation_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.submission (
-  submission_id serial not null,
-  user_id uuid not null,
-  problem_id integer not null,
-  language character varying(50) null,
-  status character varying(50) null,
-  exec_time double precision null,
-  submitted_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  solution_code text null,
-  mem_taken double precision null,
-  output text null,
-  constraint submission_pkey primary key (submission_id),
-  constraint submission_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint submission_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.track (
-  track_id serial not null,
-  name character varying(100) not null,
-  description text null,
-  generated_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  created_by uuid not null,
-  constraint track_pkey primary key (track_id),
-  constraint track_created_by_fkey foreign KEY (created_by) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.track_problem (
-  track_id integer not null,
-  problem_id integer not null,
-  ordinal integer null,
-  uploaded_by uuid not null,
-  uploaded_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint track_problem_pkey primary key (track_id, problem_id),
-  constraint track_problem_problem_id_fkey foreign KEY (problem_id) references "Problem" (problem_id),
-  constraint track_problem_track_id_fkey foreign KEY (track_id) references track (track_id),
-  constraint track_problem_uploaded_by_fkey foreign KEY (uploaded_by) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.user_badge (
-  badge_id integer not null,
-  user_id uuid not null,
-  awarded_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint user_badge_pkey primary key (badge_id, user_id),
-  constraint user_badge_badge_id_fkey foreign KEY (badge_id) references badge (badge_id),
-  constraint user_badge_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.user_participant (
-  user_participant_id serial not null,
-  contest_id integer not null,
-  user_id uuid not null,
-  joined_at timestamp without time zone null default now(),
-  constraint user_participant_pkey primary key (user_participant_id),
-  constraint user_participant_contest_id_fkey foreign KEY (contest_id) references contest (contest_id),
-  constraint user_participant_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.user_rating (
-  user_id uuid not null,
-  contest_id integer not null,
-  rating_performance integer null,
-  constraint user_rating_pkey primary key (user_id, contest_id),
-  constraint user_rating_contest_id_fkey foreign KEY (contest_id) references contest (contest_id),
-  constraint user_rating_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
-
-create table public.user_track_progress (
-  user_id uuid not null,
-  track_id integer not null,
-  status character varying(50) null,
-  updated_at timestamp without time zone null default CURRENT_TIMESTAMP,
-  constraint user_track_progress_pkey primary key (user_id, track_id),
-  constraint user_track_progress_track_id_fkey foreign KEY (track_id) references track (track_id),
-  constraint user_track_progress_user_id_fkey foreign KEY (user_id) references profiles (id)
-) TABLESPACE pg_default;
+CREATE TABLE public.Online_judge (
+  judge_id integer NOT NULL DEFAULT nextval('"Online_judge_judge_id_seq"'::regclass),
+  name character varying NOT NULL,
+  api_based_url text,
+  CONSTRAINT Online_judge_pkey PRIMARY KEY (judge_id)
+);
+CREATE TABLE public.Problem (
+  problem_id integer NOT NULL DEFAULT nextval('"Problem_problem_id_seq"'::regclass),
+  source_oj_id integer NOT NULL,
+  external_id character varying NOT NULL,
+  title character varying NOT NULL,
+  url text,
+  difficulty character varying,
+  time_limit integer NOT NULL,
+  mem_limit integer NOT NULL,
+  statement_html text,
+  input_spec text,
+  output_spec text,
+  samples jsonb,
+  fetched_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT Problem_pkey PRIMARY KEY (problem_id),
+  CONSTRAINT Problem_source_oj_id_fkey FOREIGN KEY (source_oj_id) REFERENCES public.Online_judge(judge_id)
+);
+CREATE TABLE public.Problem_tag (
+  problem_id integer NOT NULL,
+  tag_id integer NOT NULL,
+  CONSTRAINT Problem_tag_pkey PRIMARY KEY (problem_id, tag_id),
+  CONSTRAINT Problem_tag_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id),
+  CONSTRAINT Problem_tag_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.Tag(tag_id)
+);
+CREATE TABLE public.Tag (
+  tag_id integer NOT NULL DEFAULT nextval('"Tag_tag_id_seq"'::regclass),
+  name character varying NOT NULL UNIQUE,
+  CONSTRAINT Tag_pkey PRIMARY KEY (tag_id)
+);
+CREATE TABLE public.badge (
+  badge_id integer NOT NULL DEFAULT nextval('badge_badge_id_seq'::regclass),
+  name character varying NOT NULL,
+  icon_url text,
+  description text,
+  CONSTRAINT badge_pkey PRIMARY KEY (badge_id)
+);
+CREATE TABLE public.contest (
+  contest_id integer NOT NULL DEFAULT nextval('contest_contest_id_seq'::regclass),
+  name character varying NOT NULL,
+  password_hash text,
+  start_time timestamp without time zone,
+  end_time timestamp without time zone,
+  is_virtual boolean DEFAULT false,
+  is_secured boolean DEFAULT false,
+  difficulty character varying,
+  description character varying,
+  CONSTRAINT contest_pkey PRIMARY KEY (contest_id)
+);
+CREATE TABLE public.contest_creation (
+  creation_id integer NOT NULL DEFAULT nextval('contest_creation_creation_id_seq'::regclass),
+  created_by uuid NOT NULL,
+  contest_id integer NOT NULL,
+  CONSTRAINT contest_creation_pkey PRIMARY KEY (creation_id),
+  CONSTRAINT contest_creation_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
+  CONSTRAINT contest_creation_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id)
+);
+CREATE TABLE public.contest_problem (
+  contest_id integer NOT NULL,
+  problem_id integer NOT NULL,
+  alias character varying,
+  CONSTRAINT contest_problem_pkey PRIMARY KEY (contest_id, problem_id),
+  CONSTRAINT contest_problem_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id),
+  CONSTRAINT contest_problem_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.contest_submission (
+  con_sub_id integer NOT NULL DEFAULT nextval('contest_submission_conprob_id_seq'::regclass),
+  contest_id integer NOT NULL,
+  submission_id integer NOT NULL,
+  problem_id integer,
+  CONSTRAINT contest_submission_pkey PRIMARY KEY (con_sub_id),
+  CONSTRAINT contest_submission_submission_id_fkey FOREIGN KEY (submission_id) REFERENCES public.submission(submission_id),
+  CONSTRAINT contest_submission_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id),
+  CONSTRAINT contest_submission_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id)
+);
+CREATE TABLE public.discussion_like (
+  like_id integer NOT NULL DEFAULT nextval('discussion_like_like_id_seq'::regclass),
+  post_id integer,
+  user_id uuid,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT discussion_like_pkey PRIMARY KEY (like_id),
+  CONSTRAINT discussion_like_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.discussion_post(disspost_id),
+  CONSTRAINT discussion_like_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.discussion_post (
+  disspost_id integer NOT NULL DEFAULT nextval('discussion_post_disspost_id_seq'::regclass),
+  dissthread_id integer NOT NULL,
+  user_id uuid NOT NULL,
+  content text,
+  posted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  likes integer DEFAULT 0,
+  CONSTRAINT discussion_post_pkey PRIMARY KEY (disspost_id),
+  CONSTRAINT discussion_post_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT discussion_post_dissthread_id_fkey FOREIGN KEY (dissthread_id) REFERENCES public.discussion_thread(dissthread_id)
+);
+CREATE TABLE public.discussion_thread (
+  dissthread_id integer NOT NULL DEFAULT nextval('discussion_thread_dissthread_id_seq'::regclass),
+  created_by uuid NOT NULL,
+  title character varying NOT NULL,
+  thread_type character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  view_count integer DEFAULT 0,
+  problem_id integer,
+  contest_id integer,
+  group_id integer,
+  CONSTRAINT discussion_thread_pkey PRIMARY KEY (dissthread_id),
+  CONSTRAINT fk_discussion_thread_group FOREIGN KEY (group_id) REFERENCES public.group(group_id),
+  CONSTRAINT fk_discussion_thread_problem FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id),
+  CONSTRAINT discussion_thread_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
+  CONSTRAINT fk_discussion_thread_contest FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id)
+);
+CREATE TABLE public.discussion_view (
+  view_id integer NOT NULL DEFAULT nextval('discussion_view_view_id_seq'::regclass),
+  thread_id integer,
+  user_id uuid,
+  last_viewed_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT discussion_view_pkey PRIMARY KEY (view_id),
+  CONSTRAINT discussion_view_thread_id_fkey FOREIGN KEY (thread_id) REFERENCES public.discussion_thread(dissthread_id),
+  CONSTRAINT discussion_view_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.editorial_approval (
+  approval_id integer NOT NULL DEFAULT nextval('editorial_approval_approval_id_seq'::regclass),
+  probed_id integer NOT NULL,
+  approved_by uuid NOT NULL,
+  approved_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT editorial_approval_pkey PRIMARY KEY (approval_id),
+  CONSTRAINT editorial_approval_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES public.profiles(id),
+  CONSTRAINT editorial_approval_probed_id_fkey FOREIGN KEY (probed_id) REFERENCES public.problem_editorial(probed_id)
+);
+CREATE TABLE public.fav_prob (
+  fav_prob_id integer NOT NULL DEFAULT nextval('fav_prob_fav_prob_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  problem_id integer NOT NULL,
+  CONSTRAINT fav_prob_pkey PRIMARY KEY (fav_prob_id),
+  CONSTRAINT fav_prob_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT fav_prob_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.follow (
+  follower_id uuid NOT NULL,
+  followee_id uuid NOT NULL,
+  awarded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT follow_pkey PRIMARY KEY (follower_id, followee_id),
+  CONSTRAINT follow_follower_id_fkey FOREIGN KEY (follower_id) REFERENCES public.profiles(id),
+  CONSTRAINT follow_followee_id_fkey FOREIGN KEY (followee_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.group (
+  group_id integer NOT NULL DEFAULT nextval('group_group_id_seq'::regclass),
+  name character varying NOT NULL,
+  description text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  is_private boolean NOT NULL DEFAULT false,
+  password_hash text,
+  CONSTRAINT group_pkey PRIMARY KEY (group_id)
+);
+CREATE TABLE public.group_chat (
+  chat_id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  sent_at timestamp with time zone NOT NULL DEFAULT now(),
+  chat_content text,
+  group_id integer,
+  user_id uuid DEFAULT auth.uid(),
+  edited_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT group_chat_pkey PRIMARY KEY (chat_id),
+  CONSTRAINT group_chat_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.group(group_id),
+  CONSTRAINT group_chat_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.group_creation (
+  grp_crt_id integer NOT NULL DEFAULT nextval('group_creation_grp_crt_id_seq'::regclass),
+  created_by uuid NOT NULL,
+  group_id integer NOT NULL,
+  CONSTRAINT group_creation_pkey PRIMARY KEY (grp_crt_id),
+  CONSTRAINT group_creation_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.group(group_id),
+  CONSTRAINT group_creation_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.group_member (
+  group_member_id integer NOT NULL DEFAULT nextval('group_member_group_member_id_seq'::regclass),
+  group_id integer NOT NULL,
+  user_id uuid NOT NULL,
+  joined_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  role character varying NOT NULL DEFAULT 'member'::character varying,
+  CONSTRAINT group_member_pkey PRIMARY KEY (group_member_id),
+  CONSTRAINT group_member_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.group(group_id),
+  CONSTRAINT group_member_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.notification (
+  notification_id integer NOT NULL DEFAULT nextval('notification_notification_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  type character varying NOT NULL,
+  reference_id integer,
+  title character varying NOT NULL,
+  message text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  read_at timestamp without time zone,
+  group_id integer,
+  CONSTRAINT notification_pkey PRIMARY KEY (notification_id),
+  CONSTRAINT notification_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.group(group_id),
+  CONSTRAINT notification_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.personal_record (
+  record_id integer NOT NULL DEFAULT nextval('personal_record_record_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  problem_id integer NOT NULL,
+  status character varying NOT NULL DEFAULT 'attempted'::character varying,
+  attempts_count integer NOT NULL DEFAULT 0,
+  first_attempted timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  last_attempted timestamp without time zone,
+  solved_at timestamp without time zone,
+  CONSTRAINT personal_record_pkey PRIMARY KEY (record_id),
+  CONSTRAINT personal_record_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT personal_record_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.problem_editorial (
+  probed_id integer NOT NULL DEFAULT nextval('problem_editorial_probed_id_seq'::regclass),
+  problem_id integer NOT NULL,
+  created_by uuid NOT NULL,
+  content text,
+  status character varying NOT NULL DEFAULT 'draft'::character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp without time zone,
+  CONSTRAINT problem_editorial_pkey PRIMARY KEY (probed_id),
+  CONSTRAINT problem_editorial_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id),
+  CONSTRAINT problem_editorial_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  username character varying NOT NULL UNIQUE,
+  institution character varying,
+  bio character varying,
+  is_admin boolean NOT NULL DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.recommendation (
+  user_id uuid NOT NULL,
+  problem_id integer NOT NULL,
+  score double precision,
+  generated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT recommendation_pkey PRIMARY KEY (user_id, problem_id),
+  CONSTRAINT recommendation_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT recommendation_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.submission (
+  submission_id integer NOT NULL DEFAULT nextval('submission_submission_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  problem_id integer NOT NULL,
+  language character varying,
+  status character varying,
+  exec_time double precision,
+  submitted_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  solution_code text,
+  mem_taken double precision,
+  output text,
+  CONSTRAINT submission_pkey PRIMARY KEY (submission_id),
+  CONSTRAINT submission_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id),
+  CONSTRAINT submission_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.track (
+  track_id integer NOT NULL DEFAULT nextval('track_track_id_seq'::regclass),
+  name character varying NOT NULL,
+  description text,
+  generated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  created_by uuid NOT NULL,
+  CONSTRAINT track_pkey PRIMARY KEY (track_id),
+  CONSTRAINT track_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.track_problem (
+  track_id integer NOT NULL,
+  problem_id integer NOT NULL,
+  ordinal integer,
+  uploaded_by uuid NOT NULL,
+  uploaded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT track_problem_pkey PRIMARY KEY (track_id, problem_id),
+  CONSTRAINT track_problem_uploaded_by_fkey FOREIGN KEY (uploaded_by) REFERENCES public.profiles(id),
+  CONSTRAINT track_problem_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.track(track_id),
+  CONSTRAINT track_problem_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES public.Problem(problem_id)
+);
+CREATE TABLE public.user_badge (
+  badge_id integer NOT NULL,
+  user_id uuid NOT NULL,
+  awarded_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT user_badge_pkey PRIMARY KEY (badge_id, user_id),
+  CONSTRAINT user_badge_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badge(badge_id),
+  CONSTRAINT user_badge_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.user_participant (
+  user_participant_id integer NOT NULL DEFAULT nextval('user_participant_user_participant_id_seq'::regclass),
+  contest_id integer NOT NULL,
+  user_id uuid NOT NULL,
+  joined_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT user_participant_pkey PRIMARY KEY (user_participant_id),
+  CONSTRAINT user_participant_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_participant_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id)
+);
+CREATE TABLE public.user_rating (
+  user_id uuid NOT NULL,
+  contest_id integer NOT NULL,
+  rating_performance integer,
+  CONSTRAINT user_rating_pkey PRIMARY KEY (user_id, contest_id),
+  CONSTRAINT user_rating_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
+  CONSTRAINT user_rating_contest_id_fkey FOREIGN KEY (contest_id) REFERENCES public.contest(contest_id)
+);
+CREATE TABLE public.user_track_progress (
+  user_id uuid NOT NULL,
+  track_id integer NOT NULL,
+  status character varying,
+  updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT user_track_progress_pkey PRIMARY KEY (user_id, track_id),
+  CONSTRAINT user_track_progress_track_id_fkey FOREIGN KEY (track_id) REFERENCES public.track(track_id),
+  CONSTRAINT user_track_progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id)
+);

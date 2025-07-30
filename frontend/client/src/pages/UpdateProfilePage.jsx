@@ -21,7 +21,13 @@ function NeonGlowSVG({ className = "", style = {}, ...props }) {
           <stop offset="100%" stopColor="#ec4899" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <ellipse cx="720" cy="100" rx="700" ry="60" fill="url(#neon-glow-update-profile)" />
+      <ellipse
+        cx="720"
+        cy="100"
+        rx="700"
+        ry="60"
+        fill="url(#neon-glow-update-profile)"
+      />
     </svg>
   );
 }
@@ -92,15 +98,31 @@ const UpdateProfilePage = () => {
     <div className="min-h-screen bg-gray-950 text-white p-0 relative overflow-hidden">
       <div className="fixed inset-0 w-screen h-screen z-0 left-0 top-0">
         <div className="absolute inset-0 pointer-events-none z-10">
-          <svg width="100vw" height="100vh" viewBox="0 0 1920 1080" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
+          <svg
+            width="100vw"
+            height="100vh"
+            viewBox="0 0 1920 1080"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-full block"
+          >
             <defs>
-              <radialGradient id="cyanglow-update-profile" cx="50%" cy="50%" r="80%">
+              <radialGradient
+                id="cyanglow-update-profile"
+                cx="50%"
+                cy="50%"
+                r="80%"
+              >
                 <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.38" />
                 <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.18" />
                 <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
               </radialGradient>
             </defs>
-            <rect width="1920" height="1080" fill="url(#cyanglow-update-profile)" />
+            <rect
+              width="1920"
+              height="1080"
+              fill="url(#cyanglow-update-profile)"
+            />
           </svg>
         </div>
       </div>
@@ -110,7 +132,10 @@ const UpdateProfilePage = () => {
       >
         <div className="relative">
           <NeonGlowSVG style={{ top: "-50px" }} />
-          <h1 className="text-4xl font-bold text-center mb-2 text-cyan-300" style={{ textShadow: "0 0 12px rgba(56, 189, 248, 0.5)" }}>
+          <h1
+            className="text-4xl font-bold text-center mb-2 text-cyan-300"
+            style={{ textShadow: "0 0 12px rgba(56, 189, 248, 0.5)" }}
+          >
             Update Profile
           </h1>
           <p className="text-center text-gray-400 mb-8">
@@ -132,7 +157,9 @@ const UpdateProfilePage = () => {
 
         <form className="space-y-4">
           <div>
-            <label className="block mb-1 text-sm text-gray-400 font-medium">Username <span className="text-pink-400">*</span></label>
+            <label className="block mb-1 text-sm text-gray-400 font-medium">
+              Username <span className="text-pink-400">*</span>
+            </label>
             <input
               className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
               type="text"
@@ -143,7 +170,9 @@ const UpdateProfilePage = () => {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm text-gray-400 font-medium">Email</label>
+            <label className="block mb-1 text-sm text-gray-400 font-medium">
+              Email
+            </label>
             <input
               className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 opacity-70 cursor-not-allowed"
               type="email"
@@ -153,7 +182,9 @@ const UpdateProfilePage = () => {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm text-gray-400 font-medium">Institution</label>
+            <label className="block mb-1 text-sm text-gray-400 font-medium">
+              Institution
+            </label>
             <input
               className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
               type="text"
@@ -164,7 +195,9 @@ const UpdateProfilePage = () => {
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm text-gray-400 font-medium">Bio</label>
+            <label className="block mb-1 text-sm text-gray-400 font-medium">
+              Bio
+            </label>
             <textarea
               className="block w-full p-2.5 bg-gray-800 text-gray-200 rounded-lg border border-gray-700 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all duration-200"
               name="bio"
@@ -178,7 +211,7 @@ const UpdateProfilePage = () => {
 
         <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-700">
           <button
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate("/profile")}
             className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition duration-300"
             disabled={loading}
           >

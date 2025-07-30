@@ -30,20 +30,20 @@ const NotificationBell = () => {
     switch (notification.type) {
       case "contest_start":
       case "contest_end":
-        window.location.href = `/contest/${notification.reference_id}`;
+        window.location.href = `/contest/${notification.contest_id}`;
         break;
       case "thread_reply":
-        window.location.href = `/discussion/thread/${notification.reference_id}`;
+        window.location.href = `/discussion/thread/${notification.thread_id}`;
         break;
       case "editorial_update":
-        window.location.href = `/problem/${notification.reference_id}/editorial`;
+        window.location.href = `/problem/${notification.problem_id}/editorial`;
         break;
       case "group_invite":
       case "group_join":
         window.location.href = `/group/${notification.group_id}`;
         break;
       case "track_completed":
-        window.location.href = `/track/${notification.reference_id}`;
+        window.location.href = `/track/${notification.track_id}`;
         break;
       default:
         break;

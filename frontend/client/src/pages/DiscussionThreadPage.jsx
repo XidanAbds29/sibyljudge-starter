@@ -20,77 +20,21 @@ export default function DiscussionThreadPage() {
 
   useEffect(() => {
     let mounted = true;
-    let channel;
+    const pollingInterval = 5000; // Poll every 5 seconds
 
-    const setupRealtimeSubscription = async () => {
-      try {
-        // Unsubscribe from any existing channel
-        if (channel) {
-          channel.unsubscribe();
-          supabase.removeChannel(channel);
-        }
+    // Initial fetch
+    fetchThreadData();
 
-        // Create new channel with specific channel config
-        channel = supabase.channel(`thread-${id}`, {
-          config: {
-            broadcast: { self: true },
-            presence: { key: user?.id || "anonymous" },
-          },
-        });
-
-        // Set up subscription with error handling
-        channel
-          .on("system", { event: "disconnect" }, () => {
-            console.log("Disconnected from realtime");
-            if (mounted) {
-              setTimeout(() => setupRealtimeSubscription(), 5000);
-            }
-          })
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "discussion_post",
-              filter: `dissthread_id=eq.${id}`,
-            },
-            async () => {
-              if (!mounted) return;
-              try {
-                await fetchThreadData();
-              } catch (error) {
-                console.error("Error fetching thread data:", error);
-              }
-            }
-          );
-
-        const status = await channel.subscribe(async (status, err) => {
-          if (status === "SUBSCRIBED" && mounted) {
-            console.log("Connected to realtime");
-            await fetchThreadData();
-          }
-          if (status === "CHANNEL_ERROR") {
-            console.error("Channel error:", err);
-            if (mounted) {
-              setTimeout(() => setupRealtimeSubscription(), 5000);
-            }
-          }
-          if (err) {
-            console.error("Subscription error:", err);
-          }
-        });
-      } catch (err) {
-        console.error("Error setting up realtime subscription:", err);
+    // Set up polling
+    const pollTimer = setInterval(() => {
+      if (mounted) {
+        fetchThreadData();
       }
-    };
+    }, pollingInterval);
 
-    setupRealtimeSubscription();
     return () => {
       mounted = false;
-      if (channel) {
-        channel.unsubscribe();
-        supabase.removeChannel(channel);
-      }
+      clearInterval(pollTimer);
     };
   }, [id]);
 
@@ -99,20 +43,26 @@ export default function DiscussionThreadPage() {
       // Fetch thread details
       const { data: threadData, error: threadError } = await supabase
         .from("discussion_thread")
-        .select(
-          `
+        .select(`
           *,
           creator:created_by(
             id,
             username,
             institution
           ),
-          problem:reference_id(
+          related_problem:problem_id(
             title,
             external_id
+          ),
+          related_contest:contest_id(
+            name,
+            start_time,
+            end_time
+          ),
+          related_group:group_id(
+            name
           )
-        `
-        )
+        `)
         .eq("dissthread_id", id)
         .single();
 
@@ -133,7 +83,7 @@ export default function DiscussionThreadPage() {
         `
         )
         .eq("dissthread_id", id)
-        .order("created_at", { ascending: true });
+        .order("posted_at", { ascending: true });
 
       if (postsError) throw postsError;
 
@@ -265,16 +215,43 @@ export default function DiscussionThreadPage() {
           Started by {thread.creator?.username || "Unknown"} •{" "}
           {format(new Date(thread.created_at), "MMM d, yyyy, HH:mm")}
         </div>
-        {thread.reference_id && thread.problem && (
+        {/* Show reference based on thread type */}
+        {thread.thread_type !== 'general' && (
           <div className="mt-2">
             <span className="text-sm text-gray-400">
-              Related to problem:{" "}
-              <Link
-                to={"/problem/" + thread.reference_id}
-                className="text-cyan-400 hover:text-cyan-300"
-              >
-                {thread.problem.title}
-              </Link>
+              {thread.thread_type === 'problem' && thread.related_problem && (
+                <>
+                  Related to problem:{" "}
+                  <Link
+                    to={"/problem/" + thread.problem_id}
+                    className="text-cyan-400 hover:text-cyan-300"
+                  >
+                    {thread.related_problem.title}
+                  </Link>
+                </>
+              )}
+              {thread.thread_type === 'contest' && thread.related_contest && (
+                <>
+                  Related to contest:{" "}
+                  <Link
+                    to={"/contest/" + thread.contest_id}
+                    className="text-cyan-400 hover:text-cyan-300"
+                  >
+                    {thread.related_contest.name}
+                  </Link>
+                </>
+              )}
+              {thread.thread_type === 'group' && thread.related_group && (
+                <>
+                  Related to group:{" "}
+                  <Link
+                    to={"/group/" + thread.group_id}
+                    className="text-cyan-400 hover:text-cyan-300"
+                  >
+                    {thread.related_group.name}
+                  </Link>
+                </>
+              )}
             </span>
           </div>
         )}
@@ -298,7 +275,7 @@ export default function DiscussionThreadPage() {
                     {post.author?.username || "Unknown"}
                   </div>
                   <div className="text-sm text-gray-400">
-                    {format(new Date(post.created_at), "MMM d, yyyy, HH:mm")}
+                    {format(new Date(post.posted_at), "MMM d, yyyy, HH:mm")}
                   </div>
                 </div>
               </div>

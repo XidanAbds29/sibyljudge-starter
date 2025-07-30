@@ -1,14 +1,16 @@
-// frontend/client/src/components/AuthContext.jsx
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { supabase } from "../lib/supabaseClient";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 const AuthContext = createContext({
   user: null,
-  session: null,
   loading: true,
   signUp: async () => {},
   signIn: async () => {},
   signOut: async () => {},
+  updateProfile: async () => {},
+  isAuthenticated: false,
 });
 
 export const AuthProvider = ({ children }) => {
@@ -34,77 +36,50 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     let mounted = true;
+    const token = localStorage.getItem("jwt");
 
-    const handleAuthChange = async (event, currentSession) => {
-      console.log(`Auth state changed: ${event}`, currentSession?.user?.email);
-      console.log("Current session details:", currentSession);
-
-      if (!mounted) return;
+    const validateSession = async () => {
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
 
       try {
-        switch (event) {
-          case "INITIAL_SESSION":
-          case "SIGNED_IN":
-          case "TOKEN_REFRESHED":
-            if (currentSession?.user) {
-              console.log("Fetching profile for user:", currentSession.user.id);
-              const profile = await fetchProfile(currentSession.user.id);
-              console.log("Profile fetch result:", profile);
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/auth/me`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-              if (!mounted) return;
-
-              // Update states atomically
-              const userData = {
-                ...currentSession.user,
-                ...(profile || {}),
-                sessionExpires: currentSession.expires_at,
-              };
-
-              setSession(currentSession);
-              setUser(userData);
-              setLoading(false);
-
-              // Store user data in localStorage for persistence
-              localStorage.setItem("sb-user-data", JSON.stringify(userData));
-
-              // Redirect only after state is updated
-              if (window.location.pathname === "/login") {
-                console.log("Redirecting to home after successful auth");
-                window.location.replace("/");
-              }
-            } else {
-              console.log("No user in current session");
-              setLoading(false);
+        if (response.ok) {
+          const data = await response.json();
+          if (mounted) {
+            setUser(data.user);
+            if (window.location.pathname === "/login") {
+              window.location.replace("/");
             }
-            break;
-
-          case "SIGNED_OUT":
-          case "USER_DELETED":
-            console.log("User signed out or deleted");
-            setUser(null);
-            setSession(null);
-            localStorage.removeItem("sb-user-data");
-            setLoading(false);
-
-            if (window.location.pathname !== "/login") {
-              window.location.replace("/login");
-            }
-            break;
-
-          default:
-            setLoading(false);
-            break;
+          }
+        } else {
+          localStorage.removeItem("jwt");
+          setUser(null);
+          if (window.location.pathname !== "/login") {
+            window.location.replace("/login");
+          }
         }
       } catch (error) {
-        console.error("Error in auth state change:", error);
-        setLoading(false);
+        console.error("Error validating session:", error);
+        localStorage.removeItem("jwt");
+        setUser(null);
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
-
-    // Set up auth state listener
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(handleAuthChange);
 
     // Initialize auth state
     const initAuth = async () => {
@@ -187,7 +162,6 @@ export const AuthProvider = ({ children }) => {
 
     return () => {
       mounted = false;
-      subscription?.unsubscribe();
     };
   }, []);
 

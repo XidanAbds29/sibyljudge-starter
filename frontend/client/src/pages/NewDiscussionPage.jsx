@@ -59,26 +59,47 @@ export default function NewDiscussionPage() {
         return;
       }
 
+      let threadData;
+
       // Create the discussion thread
-      const { data, error } = await supabase
+      const { data: newThread, error: threadError } = await supabase
         .from("discussion_thread")
         .insert([
           {
             title: discussion.title.trim(),
-            thread_type: discussion.type,
-            content: discussion.content.trim(),
             created_by: user.id,
-            reference_type: discussion.referenceType || null,
-            reference_id: discussion.referenceId || null,
+            thread_type: discussion.type,
+            problem_id: discussion.type === 'problem' ? parseInt(discussion.referenceId) : null,
+            contest_id: discussion.type === 'contest' ? parseInt(discussion.referenceId) : null,
+            group_id: discussion.type === 'group' ? parseInt(discussion.referenceId) : null,
           },
         ])
-        .select()
+        .select(`
+          *,
+          related_problem:problem_id("Problem", title),
+          related_contest:contest_id(name),
+          related_group:group_id(name)
+        `)
         .single();
 
-      if (error) throw error;
+      if (threadError) throw threadError;
+      threadData = newThread;
+
+      // Create the initial post with the content
+      const { error: postError } = await supabase
+        .from("discussion_post")
+        .insert([
+          {
+            dissthread_id: threadData.dissthread_id,
+            user_id: user.id,
+            content: discussion.content.trim(),
+          },
+        ]);
+
+      if (postError) throw postError;
 
       // Redirect to the new discussion thread
-      navigate("/discussions/" + data.dissthread_id);
+      navigate("/discussions/" + threadData.dissthread_id);
     } catch (err) {
       console.error("Error creating discussion:", err);
       setError(
