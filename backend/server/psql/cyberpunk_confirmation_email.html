@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SibylJudge - Secure Verification Protocol</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap');
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #050811;
+      font-family: 'Rajdhani', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #cbd5e1;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrapper {
+      width: 100%;
+      background-color: #050811;
+      padding: 40px 0;
+    }
+    .container {
+      max-width: 550px;
+      margin: 0 auto;
+      background-color: #0b0f19;
+      border: 1px solid #06b6d4;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
+    }
+    .header {
+      background-color: #0c1524;
+      padding: 30px;
+      text-align: center;
+      border-bottom: 2px solid #06b6d4;
+      position: relative;
+    }
+    .logo {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: #22d3ee;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.6);
+      margin: 0;
+    }
+    .subtitle {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: #6366f1;
+      letter-spacing: 4px;
+      margin-top: 5px;
+      text-transform: uppercase;
+    }
+    .content {
+      padding: 40px 30px;
+      background: linear-gradient(180deg, #0b0f19 0%, #060913 100%);
+    }
+    .welcome-text {
+      font-size: 18px;
+      color: #f8fafc;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .body-text {
+      font-size: 15px;
+      line-height: 1.6;
+      color: #94a3b8;
+      margin-bottom: 30px;
+    }
+    .button-container {
+      text-align: center;
+      margin: 35px 0;
+    }
+    .button {
+      display: inline-block;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #050811 !important;
+      background: linear-gradient(90deg, #22d3ee 0%, #06b6d4 100%);
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+      transition: all 0.3s ease;
+    }
+    .fallback-link {
+      font-size: 12px;
+      color: #64748b;
+      word-break: break-all;
+      text-align: center;
+      margin-top: 25px;
+      line-height: 1.4;
+    }
+    .fallback-link a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+    .footer {
+      background-color: #070b14;
+      padding: 25px;
+      text-align: center;
+      border-t: 1px solid rgba(6, 182, 212, 0.1);
+      font-size: 12px;
+      color: #475569;
+    }
+    .footer-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #6366f1;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="header">
+        <div class="logo">SIBYLJUDGE</div>
+        <div class="subtitle">Secure Verification Protocol</div>
+      </div>
+      <div class="content">
+        <div class="welcome-text">ATTN: OPERATIVE {{ .Email }}</div>
+        <div class="body-text">
+          Your clearance request for the SibylJudge mainframe has been detected. 
+          To complete your onboarding sequence and gain access to advanced learning tracks, 
+          active coding contests, and operative groups, please trigger the verification key below.
+        </div>
+        <div class="button-container">
+          <a href="{{ .ConfirmationURL }}" class="button" target="_blank">Authorize Account</a>
+        </div>
+        <div class="body-text" style="margin-bottom: 10px;">
+          Once confirmed, you will be redirected to the control center with full system permissions enabled.
+        </div>
+        <div class="fallback-link">
+          If the authorization button is non-responsive, execute the redirect manually via: <br>
+          <a href="{{ .ConfirmationURL }}" target="_blank">{{ .ConfirmationURL }}</a>
+        </div>
+      </div>
+      <div class="footer">
+        <div class="footer-title">SYSTEM STATUS: ONLINE</div>
+        &copy; 2026 SibylJudge Mainframe. All rights reserved.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

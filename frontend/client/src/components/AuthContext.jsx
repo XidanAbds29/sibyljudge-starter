@@ -121,6 +121,8 @@ export const AuthProvider = ({ children }) => {
             setSession(session);
             setUser(userData);
             localStorage.setItem("sb-user-data", JSON.stringify(userData));
+            localStorage.setItem("jwt", session.access_token);
+            localStorage.setItem("authToken", session.access_token);
 
             // Handle initial redirect if needed
             if (window.location.pathname === "/login") {
@@ -139,6 +141,8 @@ export const AuthProvider = ({ children }) => {
             setSession(session);
             setUser(userData);
             localStorage.setItem("sb-user-data", JSON.stringify(userData));
+            localStorage.setItem("jwt", session.access_token);
+            localStorage.setItem("authToken", session.access_token);
           }
         } else {
           // No session found
@@ -176,6 +180,10 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (error) throw error;
+      if (data?.session) {
+        localStorage.setItem("jwt", data.session.access_token);
+        localStorage.setItem("authToken", data.session.access_token);
+      }
       return { user: data.user, session: data.session };
     } catch (error) {
       console.error("Sign up error:", error.message);
@@ -209,6 +217,8 @@ export const AuthProvider = ({ children }) => {
             ...(profile || {}),
             sessionExpires: data.session.expires_at,
           });
+          localStorage.setItem("jwt", data.session.access_token);
+          localStorage.setItem("authToken", data.session.access_token);
 
           // Force the page to navigate to home after successful login
           if (window.location.pathname === "/login") {
@@ -222,6 +232,8 @@ export const AuthProvider = ({ children }) => {
             ...data.user,
             sessionExpires: data.session.expires_at,
           });
+          localStorage.setItem("jwt", data.session.access_token);
+          localStorage.setItem("authToken", data.session.access_token);
 
           // Still redirect on basic auth success
           if (window.location.pathname === "/login") {
@@ -242,6 +254,9 @@ export const AuthProvider = ({ children }) => {
     // Clear Supabase specific storage
     localStorage.removeItem("supabase-auth-token");
     localStorage.removeItem("sb-auth-token");
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("sb-user-data");
 
     // Clear any other auth-related items
     const keysToRemove = [];

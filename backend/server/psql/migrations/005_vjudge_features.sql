@@ -1,17 +1,4 @@
 -- =============================================
--- User Related -- 1. Function: Get problem solve rate
-CREATE OR REPLACE FUNCTION get_problem_solve_rate(p_problem_id INT)
-RETURNS FLOAT AS $$
-DECLARE
-    total INT;
-    accepted INT;
-BEGIN
-    SELECT 
-        COUNT(DISTINCT user_id),
-        COUNT(DISTINCT CASE WHEN status = 'Accepted' THEN user_id END)
-    INTO total, accepted
-    FROM submission
-    WHERE problem_id = p_problem_id;Triggers
 -- =============================================
 
 -- 1. Function: Get total accepted submissions for a user

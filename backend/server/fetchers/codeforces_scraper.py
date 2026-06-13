@@ -18,7 +18,9 @@ SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 CODEFORCES_OJ_ID = 1
-API_HEADERS = {'User-Agent': 'Mozilla/5.0'}
+API_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+}
 sleep_interval = 1  # seconds between operations
 
 # Path to Chrome for fallback - Cross-platform support
@@ -218,10 +220,14 @@ def main():
     # Number of problems to scrape here
 
 
-    selected = [p for p in problems if 'rating' in p][:500]
+    selected = [p for p in problems if 'rating' in p][:50]
     print(f"Found {len(selected)} problems to process...")
 
-    loop = asyncio.get_event_loop()
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
     for i, p in enumerate(selected, 1):
         contest, idx = p['contestId'], p['index']
         ext_id = f"{contest}{idx}"

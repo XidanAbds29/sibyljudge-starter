@@ -39,4 +39,7 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+authenticateToken.authenticateToken = authenticateToken;
+authenticateToken.supabase = supabase;
+
 module.exports = authenticateToken;

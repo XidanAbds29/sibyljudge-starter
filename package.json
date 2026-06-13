@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "cd frontend/client && npm install && cd ../../backend/server && npm install",
+    "build": "cd frontend/client && npm run build"
   },
   "repository": {
     "type": "git",

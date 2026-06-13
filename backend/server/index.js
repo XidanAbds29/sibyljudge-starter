@@ -98,6 +98,7 @@ const statusRoutes = require("./routes/statusRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const groupChatRoutes = require("./routes/groupChatRoutes");
 const discussionRoutes = require("./routes/DiscussionRoutes");
+const trackRoutes = require("./routes/trackRoutes");
 
 // ─── Mount Routes ────────────────────────────────
 app.use(
@@ -189,6 +190,14 @@ app.use(
   },
   discussionRoutes
 );
+app.use(
+  "/api/tracks",
+  (req, res, next) => {
+    req.supabase = supabase;
+    next();
+  },
+  trackRoutes
+);
 
 // ─── Error Handling ──────────────────────────────
 app.use((err, req, res, next) => {
@@ -197,5 +206,9 @@ app.use((err, req, res, next) => {
 });
 
 // ─── Start Server ────────────────────────────────
-const PORT = process.env.PORT || 5050;
-app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5050;
+  app.listen(PORT, () => console.log(`🚀 Server on port ${PORT}`));
+}
+
+module.exports = app;

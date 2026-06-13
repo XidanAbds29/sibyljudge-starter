@@ -28,6 +28,7 @@ import DiscussionThreadPage from "./pages/DiscussionThreadPage";
 import { NotificationProvider } from "./components/NotificationContext";
 import NotificationBell from "./components/NotificationBell";
 import UpdateProfilePage from "./pages/UpdateProfilePage";
+import Tracks from "./pages/Tracks";
 import { AuthProvider, useAuth } from "./components/AuthContext";
 
 // Navbar component that uses AuthContext
@@ -109,6 +110,16 @@ function Navbar() {
             }`}
           >
             Groups
+          </Link>
+          <Link
+            to="/tracks"
+            className={`px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium rounded-md transition duration-300 ${
+              isActive("/tracks")
+                ? "text-cyan-400"
+                : "text-gray-300 hover:text-cyan-400"
+            }`}
+          >
+            Tracks
           </Link>
           <Link
             to="/discussions"
@@ -222,6 +233,7 @@ function AppLayoutAndRoutes() {
           <Route path="/group/:group_id" element={<GroupPage />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/update-profile" element={<UpdateProfilePage />} />
+          <Route path="/tracks" element={<Tracks />} />
           <Route
             path="*"
             element={
