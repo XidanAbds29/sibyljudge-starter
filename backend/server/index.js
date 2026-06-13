@@ -95,7 +95,7 @@ const standingsRoutes = require("./routes/standingsRoutes");
 const statusRoutes = require("./routes/statusRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const groupChatRoutes = require("./routes/groupChatRoutes");
-const discussionRoutes = require("./routes/DiscussionRoutes");
+const discussionRoutes = require("./routes/discussionRoutes");
 const trackRoutes = require("./routes/trackRoutes");
 
 const checkSupabase = (req, res, next) => {

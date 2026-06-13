@@ -20,6 +20,26 @@ if (!supabaseUrl || !supabaseKey) {
   }
 }
 
-module.exports = supabase;
-module.exports.supabaseError = supabaseError;
+// Create a Proxy to support both direct imports and destructured imports seamlessly
+const proxy = new Proxy({}, {
+  get(target, prop) {
+    if (prop === "supabase") {
+      return supabase;
+    }
+    if (prop === "supabaseError") {
+      return supabaseError;
+    }
+    if (supabase) {
+      const val = supabase[prop];
+      if (typeof val === "function") {
+        return val.bind(supabase);
+      }
+      return val;
+    }
+    return undefined;
+  }
+});
+
+module.exports = proxy;
+
 
