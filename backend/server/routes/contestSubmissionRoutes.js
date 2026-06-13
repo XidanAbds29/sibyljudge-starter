@@ -1,12 +1,19 @@
 // backend/server/routes/contestSubmissionRoutes.js
 const express = require("express");
 const router = express.Router();
-const { createClient } = require("@supabase/supabase-js");
+const supabase = require("../supabaseClient");
+const { supabaseError } = require("../supabaseClient");
 
-// Create Supabase client
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+router.use((req, res, next) => {
+  if (!supabase) {
+    return res.status(500).json({
+      error: "Contest submission service not initialized.",
+      details: supabaseError ? supabaseError.message : "Supabase client is null"
+    });
+  }
+  next();
+});
+
 
 // POST /api/contest-submissions - Link a submission to a contest
 router.post("/", async (req, res) => {

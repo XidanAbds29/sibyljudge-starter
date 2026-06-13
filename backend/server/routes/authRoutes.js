@@ -1,15 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { createClient } = require("@supabase/supabase-js");
+const supabase = require("../supabaseClient");
+const { supabaseError } = require("../supabaseClient");
 
-// Always use a single global supabase client
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = (
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.PUBLIC_SUPABASE_ANON_KEY
-).trim();
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+router.use((req, res, next) => {
+  if (!supabase) {
+    return res.status(500).json({
+      error: "Authentication service not initialized.",
+      details: supabaseError ? supabaseError.message : "Supabase client is null"
+    });
+  }
+  next();
+});
+
 
 // Signup
 router.post("/signup", async (req, res) => {

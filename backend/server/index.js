@@ -8,21 +8,10 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ─── Supabase Client ────────────────────────────
-const { createClient } = require("@supabase/supabase-js");
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseServiceKey = (
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.PUBLIC_SUPABASE_ANON_KEY ||
-  ""
-).trim();
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error(
-    "Supabase URL or Service Key missing in environment variables"
-  );
-}
+const supabase = require("./supabaseClient");
+const { supabaseError } = require("./supabaseClient");
 
-// Debug: Log key info to help diagnose 403 errors
+// Debug: Log key info to help diagnose 403 errors safely
 console.log(
   "[DEBUG] SUPABASE_SERVICE_ROLE_KEY length:",
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -41,43 +30,52 @@ console.log(
     ? process.env.SUPABASE_SERVICE_ROLE_KEY.slice(-10)
     : "undefined"
 );
-console.log("[DEBUG] supabaseUrl:", supabaseUrl);
-console.log("[DEBUG] supabaseServiceKey length:", supabaseServiceKey.length);
-console.log(
-  "[DEBUG] supabaseServiceKey starts with:",
-  supabaseServiceKey.substring(0, 10)
-);
-console.log(
-  "[DEBUG] supabaseServiceKey ends with:",
-  supabaseServiceKey.slice(-10)
-);
+console.log("[DEBUG] supabaseUrl:", process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL);
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-// Test Supabase connection at startup
-(async () => {
-  try {
-    const { data, error, status } = await supabase
-      .from("Problem")
-      .select("*")
-      .limit(1);
-    if (error) {
-      console.error(
-        "[DEBUG] Supabase test query error:",
-        error,
-        "Status:",
-        status
-      );
-    } else {
-      console.log(
-        "[DEBUG] Supabase test query success. Data length:",
-        data.length
-      );
+// Test Supabase connection at startup if initialized
+if (supabase) {
+  (async () => {
+    try {
+      const { data, error, status } = await supabase
+        .from("Problem")
+        .select("*")
+        .limit(1);
+      if (error) {
+        console.error(
+          "[DEBUG] Supabase test query error:",
+          error,
+          "Status:",
+          status
+        );
+      } else {
+        console.log(
+          "[DEBUG] Supabase test query success. Data length:",
+          data.length
+        );
+      }
+    } catch (e) {
+      console.error("[DEBUG] Supabase test query threw exception:", e);
     }
-  } catch (e) {
-    console.error("[DEBUG] Supabase test query threw exception:", e);
-  }
-})();
+  })();
+} else {
+  console.warn("[WARN] Skipping Supabase startup test query as client is not initialized.");
+}
+
+// ─── Health & Diagnostics Route ──────────────────
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: supabaseError ? "ERROR" : "OK",
+    env: {
+      PUBLIC_SUPABASE_URL_exists: !!process.env.PUBLIC_SUPABASE_URL,
+      SUPABASE_URL_exists: !!process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY_exists: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      SUPABASE_SERVICE_KEY_exists: !!process.env.SUPABASE_SERVICE_KEY,
+      PUBLIC_SUPABASE_ANON_KEY_exists: !!process.env.PUBLIC_SUPABASE_ANON_KEY,
+      NODE_ENV: process.env.NODE_ENV
+    },
+    supabaseError: supabaseError ? supabaseError.message : null
+  });
+});
 
 // ─── Test Route ──────────────────────────────────
 app.get("/", async (req, res) => {
@@ -100,104 +98,31 @@ const groupChatRoutes = require("./routes/groupChatRoutes");
 const discussionRoutes = require("./routes/DiscussionRoutes");
 const trackRoutes = require("./routes/trackRoutes");
 
-// ─── Mount Routes ────────────────────────────────
-app.use(
-  "/api/problems",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  problemRoutes
-);
-app.use(
-  "/api/submissions",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  submissionRoutes
-);
-app.use(
-  "/api/judges",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  judgeRoutes
-);
-app.use(
-  "/api/sync",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  syncRoutes
-);
+const checkSupabase = (req, res, next) => {
+  if (supabaseError || !supabase) {
+    return res.status(500).json({
+      error: "Supabase client not initialized.",
+      details: supabaseError ? supabaseError.message : "Supabase client is null",
+      hint: "Check if environment variables (PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) are set in the Vercel project dashboard."
+    });
+  }
+  req.supabase = supabase;
+  next();
+};
+
+app.use("/api/problems", checkSupabase, problemRoutes);
+app.use("/api/submissions", checkSupabase, submissionRoutes);
+app.use("/api/judges", checkSupabase, judgeRoutes);
+app.use("/api/sync", checkSupabase, syncRoutes);
 app.use("/api/auth", authRoutes);
-app.use(
-  "/api/contests",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  contestRoutes
-);
-app.use(
-  "/api/contest-submissions",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  contestSubmissionRoutes
-);
-app.use(
-  "/api/standings",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  standingsRoutes
-);
-app.use(
-  "/api/status",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  statusRoutes
-);
-app.use(
-  "/api/groups",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  groupRoutes
-);
-app.use(
-  "/api/group-chat",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  groupChatRoutes
-);
-app.use(
-  "/api/discussions",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  discussionRoutes
-);
-app.use(
-  "/api/tracks",
-  (req, res, next) => {
-    req.supabase = supabase;
-    next();
-  },
-  trackRoutes
-);
+app.use("/api/contests", checkSupabase, contestRoutes);
+app.use("/api/contest-submissions", checkSupabase, contestSubmissionRoutes);
+app.use("/api/standings", checkSupabase, standingsRoutes);
+app.use("/api/status", checkSupabase, statusRoutes);
+app.use("/api/groups", checkSupabase, groupRoutes);
+app.use("/api/group-chat", checkSupabase, groupChatRoutes);
+app.use("/api/discussions", checkSupabase, discussionRoutes);
+app.use("/api/tracks", checkSupabase, trackRoutes);
 
 // ─── Error Handling ──────────────────────────────
 app.use((err, req, res, next) => {
